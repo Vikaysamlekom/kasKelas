@@ -1,0 +1,16 @@
+{
+  "dart.lineLength": 100,
+  "dart.previewFlutterUiGuides": true,
+  "dart.openDevTools": "flutter",
+  "editor.formatOnSave": true,
+  "editor.rulers": [100],
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/build": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/.dart_tool": true
+  }
+}

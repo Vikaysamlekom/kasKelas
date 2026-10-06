@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build APK rilis (semua arsitektur)",
+      "type": "shell",
+      "command": "flutter build apk --release --split-per-abi",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Build APK universal",
+      "type": "shell",
+      "command": "flutter build apk --release",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Pasang APK ke HP via USB",
+      "type": "shell",
+      "command": "adb install -r \"${workspaceFolder}/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk\"",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Bersihkan build",
+      "type": "shell",
+      "command": "flutter clean",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

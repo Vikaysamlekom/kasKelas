@@ -1,0 +1,53 @@
+name: kas_bintang_nusantara
+description: "Aplikasi pengelolaan kas siswa SMK Bintang Nusantara (offline)."
+publish_to: 'none'
+
+# versionName 1.0.0 (dipakai android:versionName)
+# versionCode  +1      (dipakai android:versionCode, naik setiap rilis)
+version: 1.0.3+4
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  provider: ^6.1.5+1
+
+  # Database lokal (SQLite) & utilitas path
+  sqflite: ^2.4.4
+  path: ^1.9.1
+  path_provider: ^2.1.6
+
+  # Format tanggal & angka, hash password, simpan preferensi
+  intl: ^0.20.3
+  crypto: ^3.0.7
+  shared_preferences: ^2.5.5
+
+  # Import/export & Dokumen
+  csv: 6.0.0
+  file_picker: ^13.1.0
+  share_plus: ^13.3.0
+  pdf: ^3.13.1
+  printing: ^5.15.1
+
+  # Foto nota pengeluaran & logo sekolah
+  image_picker: ^1.2.3
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  # Uji integrasi database di mesinPengembang (SQLite asli via FFI) supaya
+  # pembuatan skema, migrasi, dan alur kas bisa diverifikasi tanpa perangkat.
+  sqflite_common_ffi: ^2.3.4
+
+flutter:
+  uses-material-design: true
