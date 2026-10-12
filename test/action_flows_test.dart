@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kas_bintang_nusantara/core/app_error.dart';
 import 'package:kas_bintang_nusantara/core/theme.dart';
 import 'package:kas_bintang_nusantara/database/db_helper.dart';
+import 'package:kas_bintang_nusantara/models/expense_category_model.dart';
 import 'package:kas_bintang_nusantara/models/expense_model.dart';
 import 'package:kas_bintang_nusantara/models/payment_model.dart';
 import 'package:kas_bintang_nusantara/providers/cash_types_provider.dart';
@@ -369,11 +370,9 @@ void main() {
         MultiProvider(
           providers: <SingleChildWidget>[
             ChangeNotifierProvider<PaymentProvider>.value(value: p),
-            ChangeNotifierProvider<CashTypesProvider>(
-              create: (_) => CashTypesProvider(
-                cashTypeRepository: CashTypeRepository(),
-              ),
-            ),
+            // Pakai provider milik test (`.value`) agar tidak ikut di-dispose
+            // pohon widget saat `PaymentFormScreen` memicu `load()` async.
+            ChangeNotifierProvider<CashTypesProvider>.value(value: cashTypes),
             ChangeNotifierProvider<SessionProvider>(
               create: (_) => SessionProvider(authRepository: AuthRepository()),
             ),
@@ -471,6 +470,62 @@ void main() {
       await tick(tester);
 
       expect(find.text('Kategori wajib dipilih'), findsWidgets);
+      expectTombolAktif(
+        tester,
+        tombol('Simpan Pengeluaran'),
+        'Simpan Pengeluaran',
+      );
+    });
+
+    smokeTest('pengeluaran melebihi saldo: diblokir, tombol NYALA lagi', (
+      WidgetTester tester,
+    ) async {
+      final _SaldoKurang p = _SaldoKurang(
+        expenseRepository: ExpenseRepository(),
+        paymentRepository: PaymentRepository(),
+        cashTypeRepository: CashTypeRepository(),
+        auditLogRepository: AuditLogRepository(),
+      );
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: <SingleChildWidget>[
+            ChangeNotifierProvider<TransactionProvider>.value(value: p),
+            ChangeNotifierProvider<SessionProvider>(
+              create: (_) => SessionProvider(authRepository: AuthRepository()),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const PengeluaranFormScreen(),
+          ),
+        ),
+      );
+      await tick(tester);
+
+      // Pilih kategori dulu supaya validasi lolos sampai ke addExpense.
+      await ketuk(tester, find.byType(DropdownButtonFormField<int>));
+      await tick(tester);
+      await ketuk(tester, find.text('Operasional'));
+      await tick(tester);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Nominal *'),
+        '15000',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Keperluan *'),
+        'Beli ATK',
+      );
+      await tick(tester);
+      await ketuk(tester, find.text('Simpan Pengeluaran'));
+      await tick(tester);
+
+      expect(p.panggilPengeluaran, isTrue);
+      expect(
+        find.textContaining('Tidak bisa melanjutkan pengeluaran'),
+        findsWidgets,
+        reason: 'Pengeluaran melebihi saldo harus memberi pesan ke pengguna',
+      );
       expectTombolAktif(
         tester,
         tombol('Simpan Pengeluaran'),
@@ -700,5 +755,37 @@ class _GagalPengeluaran extends TransactionProvider {
     int? userId,
   }) async {
     throw AppException('Pengeluaran gagal disimpan.');
+  }
+}
+
+/// Provider yang selalu menolak addExpense karena nominal melebihi saldo,
+/// meniru perilaku repository asli saat pemasukan tidak cukup.
+class _SaldoKurang extends TransactionProvider {
+  bool panggilPengeluaran = false;
+
+  _SaldoKurang({
+    required super.expenseRepository,
+    required super.paymentRepository,
+    required super.cashTypeRepository,
+    required super.auditLogRepository,
+  });
+
+  @override
+  List<ExpenseCategoryModel> get categories => <ExpenseCategoryModel>[
+    ExpenseCategoryModel(id: 1, name: 'Operasional', createdAt: DateTime(2026)),
+  ];
+
+  @override
+  Future<void> addExpense({
+    required int categoryId,
+    required int amount,
+    required String expenseDate,
+    required String description,
+    String? receiptNote,
+    String? photoPath,
+    int? userId,
+  }) async {
+    panggilPengeluaran = true;
+    throw const SaldoInsufficientException(amount: 15000, saldo: 10000);
   }
 }

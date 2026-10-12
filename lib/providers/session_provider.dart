@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../database/db_helper.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
@@ -22,29 +21,30 @@ class SessionProvider extends ChangeNotifier {
   bool _isLoggingIn = false;
   String? _errorMessage;
   bool _hasTriedRestore = false;
+  bool _isPinSet = false;
 
   UserModel? get user => _user;
   bool get isLoggedIn => _user != null;
   bool get isLoggingIn => _isLoggingIn;
   String? get errorMessage => _errorMessage;
 
+  /// Apakah bendahara sudah membuat PIN (false → tampilkan layar Buat PIN).
+  bool get isPinSet => _isPinSet;
+
   /// Apakah app dibuka langsung ke dashboard setelah masuk.
   bool get hasTriedRestore => _hasTriedRestore;
 
-  /// Mulai sesi login.
-  Future<bool> login(String username, String password) async {
+  /// Mulai sesi login memverifikasi PIN yang dimasukkan pengguna.
+  Future<bool> loginWithPin(String pin) async {
     _isLoggingIn = true;
     _errorMessage = null;
     notifyListeners();
 
-    final UserModel? user = await authRepository.login(
-      username: username,
-      password: password,
-    );
+    final UserModel? user = await authRepository.loginWithPin(pin);
 
     _isLoggingIn = false;
     if (user == null) {
-      _errorMessage = 'Username atau kata sandi salah.';
+      _errorMessage = 'PIN salah. Coba lagi.';
       notifyListeners();
       return false;
     }
@@ -56,23 +56,33 @@ class SessionProvider extends ChangeNotifier {
     return true;
   }
 
-  /// Pulihkan sesi dari penyimpanan lokal (dipanggil saat startup).
+  /// Buat PIN pertama saat pengguna baru membuka aplikasi, lalu langsung masuk.
+  ///
+  /// Hanya bisa dipanggil sekali — setelah ada PIN, `setInitialPin` menolak.
+  Future<bool> createInitialPin(String pin) async {
+    final bool created = await authRepository.setInitialPin(pin);
+    if (!created) {
+      _errorMessage = 'Gagal membuat PIN. Coba lagi.';
+      notifyListeners();
+      return false;
+    }
+    _isPinSet = true;
+    return loginWithPin(pin);
+  }
+
+  /// Dipanggil saat startup. Aplikasi selalu mewajibkan PIN setiap kali
+  /// dibuka, sehingga sesi lama sengaja TIDAK dipulihkan. Sesi tersimpan
+  /// dibersihkan agar bendahara tidak bisa masuk tanpa memasukkan PIN lagi.
+  ///
+  /// [isPinSet] ikut dibaca untuk memutuskan layar Buat PIN atau Login.
   Future<void> restoreSession() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      final int? userId = prefs.getInt(SessionPrefs.loggedInUserId);
-      if (userId != null) {
-        final Map<String, Object?>? row = await DBHelper.instance.queryOne(
-          DBHelper.tblUsers,
-          where: 'id = ? AND is_active = 1',
-          whereArgs: <Object?>[userId],
-        );
-        if (row == null) {
-          await prefs.remove(SessionPrefs.loggedInUserId);
-        } else {
-          _user = UserModel.fromMap(row);
-        }
-      }
+      await prefs.remove(SessionPrefs.loggedInUserId);
+      await prefs.remove(SessionPrefs.loggedInUsername);
+      await prefs.remove(SessionPrefs.loggedInFullName);
+      _user = null;
+      _isPinSet = await authRepository.isPinSet();
     } finally {
       _hasTriedRestore = true;
       notifyListeners();

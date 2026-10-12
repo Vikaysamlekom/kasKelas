@@ -89,6 +89,45 @@ class DBHelper {
         if (oldVersion < 3) {
           await _createIndexes(db);
         }
+        // Migrasi: versi 3 → 4 mengosongkan nominal bawaan jenis kas supaya
+        // tunggakan tidak terisi otomatis (mis. 25.000 + 10.000 = 35.000).
+        // Hanya diubah bila masih bernilai bawaan, agar nominal yang sudah
+        // diatur bendahara tidak ikut terhapus.
+        if (oldVersion < 4) {
+          const List<(String, int)> bawaanLama = <(String, int)>[
+            ('BULANAN', 25000),
+            ('TAHUNAN', 150000),
+            ('SOSIAL', 10000),
+          ];
+          for (final (String, int) item in bawaanLama) {
+            await db.update(
+              tblCashTypes,
+              <String, Object?>{'amount': 0},
+              where: 'code = ? AND amount = ?',
+              whereArgs: <Object?>[item.$1, item.$2],
+            );
+          }
+        }
+        // Migrasi: versi 4 → 5 — tidak ada PIN bawaan lagi. Hash kata sandi
+        // bawaan lama dikosongkan agar pengguna diminta membuat PIN sendiri.
+        // PIN yang sudah dipilih pengguna sendiri tetap dipertahankan.
+        if (oldVersion < 5) {
+          final List<Map<String, Object?>> users = await db.query(tblUsers);
+          for (final Map<String, Object?> u in users) {
+            final String username = u['username'] as String;
+            final String hash = (u['password_hash'] as String?) ?? '';
+            if (hash.isEmpty) continue;
+            if (hash != hashPassword(AppConstants.defaultPassword, username)) {
+              continue;
+            }
+            await db.update(
+              tblUsers,
+              <String, Object?>{'password_hash': AppConstants.noPinHash},
+              where: 'id = ?',
+              whereArgs: <Object?>[u['id']],
+            );
+          }
+        }
       },
     );
   }
@@ -372,13 +411,11 @@ class DBHelper {
   Future<void> _seedData(Database db) async {
     final String now = DateTime.now().toIso8601String();
 
-    // Akun bendahara default
+    // Akun bendahara default — TANPA PIN bawaan (`password_hash` kosong).
+    // Pengguna diminta membuat PIN sendiri saat pertama membuka aplikasi.
     await db.insert(tblUsers, <String, Object?>{
       'username': AppConstants.defaultUsername,
-      'password_hash': hashPassword(
-        AppConstants.defaultPassword,
-        AppConstants.defaultUsername,
-      ),
+      'password_hash': AppConstants.noPinHash,
       'full_name': AppConstants.defaultFullName,
       'nip': AppConstants.defaultNip,
       'role': 'bendahara',
@@ -418,13 +455,17 @@ class DBHelper {
       });
     }
 
-    // Jenis kas default
+    // Jenis kas default.
+    //
+    // Nominal sengaja DIBIARKAN 0 (bukan 25.000/10.000 dst.) supaya aplikasi
+    // tidak menetapkan tunggakan secara otomatis. Bendahara mengisi nominal
+    // kas sesuai keadaan sekolah di menu "Jenis Kas".
     final List<Map<String, Object?>> cashTypes =
         <Map<String, Object?>>[
           <String, Object?>{
             'name': 'Kas Bulanan',
             'code': 'BULANAN',
-            'amount': 25000,
+            'amount': 0,
             'frequency': 'bulanan',
             'due_day': 10,
             'description': 'Iuran kas rutin setiap bulan',
@@ -432,7 +473,7 @@ class DBHelper {
           <String, Object?>{
             'name': 'Kas Tahunan',
             'code': 'TAHUNAN',
-            'amount': 150000,
+            'amount': 0,
             'frequency': 'tahunan',
             'due_day': 31,
             'description': 'Iuran kas sekali dalam setahun',
@@ -440,7 +481,7 @@ class DBHelper {
           <String, Object?>{
             'name': 'Kas Sosial',
             'code': 'SOSIAL',
-            'amount': 10000,
+            'amount': 0,
             'frequency': 'bulanan',
             'due_day': 15,
             'description': 'Iuran kas sosial / bantuan',

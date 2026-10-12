@@ -2,18 +2,6 @@
 <!-- Ikon launcher: ganti file PNG di res/mipmap-* dengan desain yang sama
      (adaptive icon: res/mipmap-anydpi-v26/ic_launcher.xml). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background navy polos, menyatu dengan splash animasi Flutter -->
     <item android:drawable="@color/splash_background" />
-
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/launch_image" />
-    </item>
-
-    <!-- Teks nama aplikasi di bawah logo -->
-    <item>
-        <bitmap
-            android:gravity="center_horizontal|bottom"
-            android:src="@drawable/launch_text" />
-    </item>
 </layer-list>

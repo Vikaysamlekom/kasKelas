@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Aplikasi sengaja TIDAK ikut backup otomatis sistem (Auto Backup / cloud
+  backup / transfer perangkat).
+
+  Data kas siswa bersifat lokal dan rahasia per sekolah. Bila ikut backup,
+  data lama otomatis ter-restore saat aplikasi dipasang ulang, sehingga
+  install bersih tidak benar-benar bersih.
+
+  Cadangan sepenuhnya ditangani aplikasi sendiri lewat
+  Pengaturan → Backup & Restore.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,3 +1,4 @@
+import '../core/app_error.dart';
 import '../database/db_helper.dart';
 import '../models/expense_category_model.dart';
 import '../models/expense_model.dart';
@@ -182,6 +183,23 @@ class ExpenseRepository {
     if (amount <= 0) {
       throw ArgumentError('Nominal pengeluaran harus lebih dari 0.');
     }
+
+    // Saldo harus tetap >= 0: pengeluaran tidak boleh melebihi pemasukan.
+    final int totalPemasukan = await _db.sum(
+      DBHelper.tblPayments,
+      'amount',
+      where: "status != 'batal'",
+    );
+    final int totalPengeluaran = await _db.sum(
+      DBHelper.tblExpenses,
+      'amount',
+      where: "status != 'batal'",
+    );
+    final int saldo = totalPemasukan - totalPengeluaran;
+    if (amount > saldo) {
+      throw SaldoInsufficientException(amount: amount, saldo: saldo);
+    }
+
     final DateTime date = DateTime.now();
     final String code =
         await nextExpenseCode(date.year, date.month);

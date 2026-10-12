@@ -45,8 +45,12 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
       setState(() => _error = 'PIN lama dan PIN baru wajib diisi.');
       return;
     }
-    if (baru.length < 6) {
-      setState(() => _error = 'PIN baru minimal 6 karakter.');
+    if (baru.length < AppConstants.pinMinLength) {
+      setState(() => _error = 'PIN baru minimal ${AppConstants.pinMinLength} karakter.');
+      return;
+    }
+    if (baru.length > AppConstants.pinMaxLength) {
+      setState(() => _error = 'PIN baru maksimal ${AppConstants.pinMaxLength} karakter.');
       return;
     }
     if (baru != konfirmasi) {
@@ -239,7 +243,7 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
       obscureText: _sembunyikan,
       keyboardType: TextInputType.visiblePassword,
       inputFormatters: <TextInputFormatter>[
-        LengthLimitingTextInputFormatter(64),
+        LengthLimitingTextInputFormatter(AppConstants.pinMaxLength),
       ],
       decoration: InputDecoration(
         labelText: label,

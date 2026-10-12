@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kas_bintang_nusantara/core/app_error.dart';
 import 'package:kas_bintang_nusantara/core/constants.dart';
 import 'package:kas_bintang_nusantara/database/db_helper.dart';
 import 'package:kas_bintang_nusantara/models/expense_model.dart';
@@ -35,6 +36,20 @@ void main() {
 
   final DateTime now = DateTime.now();
   late String hariIni;
+
+  // PIN uji milik sendiri — aplikasi tidak menyediakan PIN bawaan.
+  const String pinUji = '927364';
+
+  /// Jenis kas bawaan bernominal 0 (tunggakan tidak diisi otomatis). Helper ini
+  /// menetapkan nominal untuk test yang memang perlu memeriksa status bayar.
+  Future<void> setKasBulananAmount(int amount) {
+    return DBHelper.instance.update(
+      DBHelper.tblCashTypes,
+      <String, Object?>{'amount': amount},
+      where: 'id = ?',
+      whereArgs: <Object?>[kasBulananId],
+    );
+  }
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -126,6 +141,24 @@ void main() {
       expect(await DBHelper.instance.count(DBHelper.tblSchoolProfile), 1);
     });
 
+    test('nominal jenis kas bawaan 0 agar tunggakan tidak otomatis', () async {
+      final List<Map<String, Object?>> rows =
+          await DBHelper.instance.query(DBHelper.tblCashTypes);
+      expect(rows, hasLength(3));
+      for (final Map<String, Object?> r in rows) {
+        expect(
+          r['amount'],
+          0,
+          reason: 'Nominal bawaan ${r['name']} harus 0, bukan angka otomatis',
+        );
+      }
+      expect(
+        await pembayaran.kasPerBulan(),
+        0,
+        reason: 'Kewajiban bulanan harus 0 sebelum bendahara mengisi nominal',
+      );
+    });
+
     test('semua index performa terbentuk', () async {
       final List<Map<String, Object?>> idx = await DBHelper.instance.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'",
@@ -145,38 +178,46 @@ void main() {
   });
 
   group('Login', () {
-    test('kredensial bawaan diterima', () async {
-      final dynamic user = await auth.login(
-        username: AppConstants.defaultUsername,
-        password: AppConstants.defaultPassword,
-      );
+    test('belum ada PIN: login ditolak', () async {
+      expect(await auth.isPinSet(), isFalse);
+      expect(await auth.loginWithPin(pinUji), isNull);
+    });
+
+    test('PIN buatan pengguna diterima', () async {
+      expect(await auth.setInitialPin(pinUji), isTrue);
+      expect(await auth.isPinSet(), isTrue);
+
+      final dynamic user = await auth.loginWithPin(pinUji);
       expect(user, isNotNull);
       expect(user!.id, userId);
     });
 
-    test('password salah ditolak', () async {
-      final dynamic user = await auth.login(
-        username: AppConstants.defaultUsername,
-        password: 'salah-sekali',
-      );
+    test('setInitialPin menolak bila PIN sudah dibuat', () async {
+      await auth.setInitialPin(pinUji);
+      expect(await auth.setInitialPin('999999'), isFalse);
+      expect(await auth.loginWithPin(pinUji), isNotNull);
+    });
+
+    test('PIN salah ditolak', () async {
+      await auth.setInitialPin(pinUji);
+      final dynamic user = await auth.loginWithPin('salah-sekali');
       expect(user, isNull);
     });
 
-    test('ganti password lalu login dengan password baru', () async {
+    test('ganti PIN mempengaruhi login', () async {
+      await auth.setInitialPin(pinUji);
       final bool ok = await auth.changePassword(
         userId: userId,
-        oldPassword: AppConstants.defaultPassword,
+        oldPassword: pinUji,
         newPassword: 'kasRahasia2026',
       );
       expect(ok, isTrue);
       expect(
-        await auth.login(username: AppConstants.defaultUsername, password: 'kasRahasia2026'),
-        isNotNull,
-      );
-      expect(
-        await auth.login(username: AppConstants.defaultUsername, password: AppConstants.defaultPassword),
+        await auth.loginWithPin(pinUji),
         isNull,
+        reason: 'PIN lama harus berhenti berlaku setelah diganti',
       );
+      expect(await auth.loginWithPin('kasRahasia2026'), isNotNull);
     });
   });
 
@@ -214,6 +255,8 @@ void main() {
 
   group('Pembayaran', () {
     test('kode transaksi berurutan dan status otomatis', () async {
+      await setKasBulananAmount(25000);
+
       final dynamic pertama = await pembayaran.add(
         studentId: siswaId,
         cashTypeId: kasBulananId,
@@ -254,6 +297,8 @@ void main() {
     });
 
     test('pembatalan pembayaran mengeluarkan nominal dari saldo', () async {
+      await setKasBulananAmount(25000);
+
       final dynamic p = await pembayaran.add(
         studentId: siswaId,
         cashTypeId: kasBulananId,
@@ -301,6 +346,16 @@ void main() {
           (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Operasional']))
               .first['id'] as int;
 
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasBulananId,
+        amount: 200000,
+        month: now.month,
+        year: now.year,
+        paidDate: hariIni,
+        recordedBy: userId,
+      );
+
       await pengeluaran.add(
         categoryId: kategoriId,
         amount: 50000,
@@ -312,13 +367,73 @@ void main() {
       final dynamic ringkasan = await dashboard.getSummary();
       expect(ringkasan.totalPengeluaran, 50000);
       expect(ringkasan.pengeluaranBulanIni, 50000);
-      expect(ringkasan.saldo, -50000);
+      expect(ringkasan.saldo, 150000);
+    });
+
+    test('pengeluaran melebihi pemasukan ditolak', () async {
+      final int kategoriId =
+          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Operasional']))
+              .first['id'] as int;
+
+      // Belum ada pemasukan → semua pengeluaran harus ditolak.
+      expect(
+        () => pengeluaran.add(
+          categoryId: kategoriId,
+          amount: 1000,
+          expenseDate: hariIni,
+          description: 'Tanpa saldo',
+          recordedBy: userId,
+        ),
+        throwsA(isA<SaldoInsufficientException>()),
+      );
+
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasBulananId,
+        amount: 50000,
+        month: now.month,
+        year: now.year,
+        paidDate: hariIni,
+        recordedBy: userId,
+      );
+
+      // Melebihi saldo 50.000 → ditolak dan tidak tersimpan.
+      expect(
+        () => pengeluaran.add(
+          categoryId: kategoriId,
+          amount: 50001,
+          expenseDate: hariIni,
+          description: 'Kelebihan',
+          recordedBy: userId,
+        ),
+        throwsA(isA<SaldoInsufficientException>()),
+      );
+      expect(await DBHelper.instance.count(DBHelper.tblExpenses), 0);
+
+      // Tepat sebesar saldo → diterima, saldo nol (tidak minus).
+      await pengeluaran.add(
+        categoryId: kategoriId,
+        amount: 50000,
+        expenseDate: hariIni,
+        description: 'Pas saldo',
+        recordedBy: userId,
+      );
+      expect((await dashboard.getSummary()).saldo, 0);
     });
 
     test('pembatalan pengeluaran mengembalikan saldo', () async {
       final int kategoriId =
           (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['ATK']))
               .first['id'] as int;
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasBulananId,
+        amount: 100000,
+        month: now.month,
+        year: now.year,
+        paidDate: hariIni,
+        recordedBy: userId,
+      );
       final dynamic e = await pengeluaran.add(
         categoryId: kategoriId,
         amount: 75000,
@@ -326,10 +441,10 @@ void main() {
         description: 'Solar genset',
         recordedBy: userId,
       );
-      expect((await dashboard.getSummary()).saldo, -75000);
+      expect((await dashboard.getSummary()).saldo, 25000);
 
       await pengeluaran.voidExpense(e.id, reason: 'Nota salah');
-      expect((await dashboard.getSummary()).saldo, 0);
+      expect((await dashboard.getSummary()).saldo, 100000);
       expect((await pengeluaran.getById(e.id))!.status, ExpenseStatus.batal);
     });
   });

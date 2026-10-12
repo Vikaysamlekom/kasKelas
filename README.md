@@ -7,20 +7,20 @@ Seluruh data (siswa, kelas, kas, transaksi, laporan) tersimpan di SQLite lokal d
 | Item | Nilai |
 | --- | --- |
 | Package | `com.bintangnusantara.kas` |
-| Versi | 1.0.0 (versionCode 1) |
+| Versi | 1.0.4 (versionCode 5) |
 | minSdk / targetSdk | 24 (Android 7.0) / 36 (Android 16) |
-| Login bawaan | username `bendahara`, kata sandi `bintang123` |
+| Login bawaan | Tidak ada — pengguna membuat PIN sendiri saat pertama dibuka |
 
 ## 1. Memasang APK di HP
 
-Folder `dist/kas-bintang-nusantara-1.0.0/` berisi 4 file:
+Folder `dist/kas-bintang-nusantara-1.0.4/` berisi 4 file:
 
 | File | Untuk | Ukuran |
 | --- | --- | --- |
-| `...-arm64-v8a.apk` | **HP modern (2017 ke atas)** — pilih ini | 23,5 MB |
-| `...-armeabi-v7a.apk` | HP lama 32-bit | 21,3 MB |
-| `...-x86_64.apk` | Emulator / tablet Intel | 24,8 MB |
-| `...-universal.apk` | Semua tipe HP, satu file | 60,5 MB |
+| `...-arm64-v8a.apk` | **HP modern (2017 ke atas)** — pilih ini | 23,6 MB |
+| `...-armeabi-v7a.apk` | HP lama 32-bit | 21,5 MB |
+| `...-x86_64.apk` | Emulator / tablet Intel | 25,0 MB |
+| `...-universal.apk` | Semua tipe HP, satu file | 60,9 MB |
 
 Kalau tidak yakin, pakai `universal`. Ukurannya besar tapi akan jalan di HP apa pun.
 
@@ -30,8 +30,9 @@ Langkah instalasi:
 2. Buka file APK dari Manajer File.
 3. Android akan meminta izin **"Pasang aplikasi tidak dikenal"** — aktifkan untuk
    aplikasi Files/Chrome yang dipakai membuka APK, lalu tekan **Pasang**.
-4. Login dengan `bendahara` / `bintang123`, lalu segera ganti kata sandi di
-   **Pengaturan → Ubah PIN**.
+4. Saat pertama dibuka, **buat PIN sendiri** (6–8 digit) — tidak ada PIN
+   bawaan. PIN ini wajib dimasukkan setiap kali aplikasi dibuka dan bisa
+   diubah sewaktu-waktu di **Pengaturan → Ubah PIN**.
 
 > APK sudah ditandatangani dan tidak bisadiedit. Android mungkin menampilkan
 > peringatan soal "sumber tidak dikenal" — itu normal untuk APK yang di luar Play Store.
@@ -137,9 +138,9 @@ tidak boleh dipakai rilis) dan Gradle akan mencetak peringatan.
 
 ### Naikkan versi
 
-Ubah `version: 1.0.0+1` di `pubspec.yaml`. Naikkan `+1` setiap rilis supaya
-Android mengenali pembaruan. `AppConstants.appVersion` di
-`lib/core/constants.dart` ikut diperbarui karena tampil di dalam aplikasi.
+Ubah `version:` di `pubspec.yaml` (contoh `1.0.4+5`). Naikkan `+1` setiap
+rilis supaya Android mengenali pembaruan. `AppConstants.appVersion` di
+`lib/core/constants.dart` ikut disamakan karena tampil di dalam aplikasi.
 
 ### Uji integrasi
 
@@ -147,7 +148,26 @@ Android mengenali pembaruan. `AppConstants.appVersion` di
 FFI, jadi alur kas (login, bayar, batalkan, laporan, saldo) bisa diverifikasi
 tanpa perangkat. Jalankan dengan `flutter test`.
 
-## 5. Catatan rilis 1.0.0
+## 5. Catatan rilis
+
+### 1.0.4 (versionCode 5)
+
+- **Tidak ada PIN bawaan.** Saat pertama dibuka, pengguna diminta membuat PIN
+  sendiri (6–8 digit). Setelah itu PIN tersebut wajib dimasukkan setiap kali
+  aplikasi dibuka. Verifikasi PIN kini membandingkan hash tersimpan, bukan
+  kode PIN tetap.
+- Diperbaiki: pesan "PIN salah" tidak lagi menempel setelah pengguna mengetik
+  ulang — indikator titik tidak tetap merah.
+- Diperbaiki: data kas & siswa tidak ikut backup otomatis sistem Android
+  (`allowBackup=false`). Sebelumnya, uninstall lalu pasang ulang bisa membuat
+  data lama ter-restore sendiri dari cloud. Cadangan tetap tersedia lewat
+  **Pengaturan → Backup & Restore**.
+- Diperbaiki: tunggakan tidak lagi terisi otomatis dari nominal jenis kas
+  bawaan (Rp 25.000 + Rp 10.000 = Rp 35.000). Semua nominal awal Rp 0.
+- Kalimat versi di Pengaturan mengikuti versi APK.
+- 143 tes lulus, `flutter analyze` bersih.
+
+### 1.0.0
 
 - Diperbaiki: saldo di Dashboard menghitung pengeluaran yang sudah dibatalkan.
   Sebelumnya pantalla Dashboard dan Laporan bisa menampilkan saldo berbeda.

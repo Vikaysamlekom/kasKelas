@@ -12,13 +12,21 @@
         boot atau foreground service yang dibutuhkan.
     -->
 
+    <!--
+        allowBackup & fullBackupContent = false: aplikasi tidak ikut backup
+        otomatis sistem (Auto Backup / cloud). Kalau ikut, data kas & siswa
+        lama akan ter-restore sendiri saat aplikasi dipasang ulang, jadi
+        "uninstall + install" tidak benar-benar bersih. Cadangan hanya lewat
+        Pengaturan → Backup & Restore di dalam aplikasi.
+    -->
     <application
         android:label="Kas Bintang Nusantara"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:allowBackup="true"
-        android:fullBackupContent="true"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:supportsRtl="true">
         <activity
             android:name=".MainActivity"

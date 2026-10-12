@@ -6,15 +6,26 @@ class AppConstants {
 
   static const String appName = 'Kas Bintang Nusantara';
   static const String appTagline = 'Bendahara SMK Bintang Nusantara';
-  static const String appVersion = '1.0.3';
+  static const String appVersion = '1.0.4';
 
   // Nama & versi database
   static const String dbName = 'kas_bintang_nusantara.db';
-  static const int dbVersion = 3;
+  static const int dbVersion = 5;
 
   // Kredensial default bendahara (dibuat otomatis saat DB pertama kali dibuat)
   static const String defaultUsername = 'bendahara';
+
+  // Kata sandi bawaan LAMA (versi sebelum PIN). Tidak lagi dipakai untuk
+  // login — kini hanya merujuk data lama yang dimigrasikan.
   static const String defaultPassword = 'bintang123';
+
+  // Nilai `password_hash` yang berarti "PIN belum pernah dibuat".
+  static const String noPinHash = '';
+
+  // Panjang PIN yang diperbolehkan (berlaku untuk Buat PIN, Ubah PIN & Login).
+  static const int pinMinLength = 6;
+  static const int pinMaxLength = 8;
+
   static const String defaultFullName = 'Bendahara SMK Bintang Nusantara';
   static const String defaultNip = '-';
 }

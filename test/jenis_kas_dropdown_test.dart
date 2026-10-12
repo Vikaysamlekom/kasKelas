@@ -169,18 +169,23 @@ void main() {
           'CashTypesProvider tidak dimuat oleh PaymentFormScreen sehingga '
           'dropdown Jenis Kas kosong dan tidak ada yang bisa dipilih',
     );
-    expect(find.text('Kas Bulanan'), findsOneWidget);
+    expect(
+      kosong.cashTypes.any((c) => c.name == 'Kas Bulanan'),
+      isTrue,
+      reason: 'Jenis kas bawaan "Kas Bulanan" harus termuat',
+    );
 
     // 2. Dropdown harus bisa dibuka dan menampilkan isi.
     await tester.tap(find.byType(DropdownButtonFormField<int>).at(1));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Kas Tahunan'), findsWidgets);
-    expect(find.text('Kas Sosial'), findsWidgets);
+    // Item dropdown menampilkan "Nama · Rp nominal", jadi pakai textContaining.
+    expect(find.textContaining('Kas Tahunan'), findsWidgets);
+    expect(find.textContaining('Kas Sosial'), findsWidgets);
 
     // 3. Pilih salah satu jenis kas.
-    await tester.tap(find.text('Kas Bulanan').last);
+    await tester.tap(find.textContaining('Kas Bulanan').last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

@@ -13,9 +13,11 @@ import 'package:kas_bintang_nusantara/providers/students_provider.dart';
 import 'package:kas_bintang_nusantara/repositories/auth_repository.dart';
 import 'package:kas_bintang_nusantara/repositories/kelas_repo.dart';
 import 'package:kas_bintang_nusantara/repositories/siswa_repo.dart';
+import 'package:kas_bintang_nusantara/screens/login/create_pin_screen.dart';
 import 'package:kas_bintang_nusantara/screens/login/login_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/profil_sekolah_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/ubah_pin_screen.dart';
+import 'package:kas_bintang_nusantara/widgets/pin_entry.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
@@ -34,9 +36,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const String dbNameTest = 'auth_flows_test';
-// Pakai kredensial bawaan aplikasi, supaya alur login default ikut teruji.
   final String userUji = AppConstants.defaultUsername;
-  final String sandiUji = AppConstants.defaultPassword;
+
+  // PIN uji milik sendiri — aplikasi sengaja TIDAK punya PIN bawaan,
+  // jadi tiap tes membuat PIN-nya sendiri.
+  const String pinUji = '927364';
 
   Future<void> hapusSemuaDbTest() async {
     final String base = await getDatabasesPath();
@@ -179,34 +183,72 @@ await hapusSemuaDbTest();
   // VERIFIKASI KREDENSIAL (I/O nyata, di luar FakeAsync)
   // ============================================================
 
-  group('Verifikasi kredensial', () {
-    test('kredensial benar diterima dan sesi tersimpan', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final SessionProvider session =
-          SessionProvider(authRepository: AuthRepository());
+  group('Verifikasi PIN', () {
+    // Kembalikan pengguna bawaan ke kondisi "belum membuat PIN" supaya tiap
+    // tes berdiri sendiri (tidak bergantung urutan).
+    Future<void> resetKeTanpaPin() => DBHelper.instance.update(
+          DBHelper.tblUsers,
+          <String, Object?>{'password_hash': AppConstants.noPinHash},
+          where: 'username = ?',
+          whereArgs: <Object?>[AppConstants.defaultUsername],
+        );
 
-      expect(await session.login(userUji, sandiUji), isTrue);
+    Future<SessionProvider> sesiBaru() async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      return SessionProvider(authRepository: AuthRepository());
+    }
+
+    test('belum ada PIN: login ditolak', () async {
+      await resetKeTanpaPin();
+      final SessionProvider session = await sesiBaru();
+
+      expect(await AuthRepository().isPinSet(), isFalse);
+      expect(await session.loginWithPin(pinUji), isFalse);
+      expect(session.isLoggedIn, isFalse);
+    });
+
+    test('PIN buatan pengguna diterima dan sesi tersimpan', () async {
+      await resetKeTanpaPin();
+      final SessionProvider session = await sesiBaru();
+
+      expect(await session.createInitialPin(pinUji), isTrue);
       expect(session.isLoggedIn, isTrue);
+      expect(session.isPinSet, isTrue);
       expect(session.user?.username, userUji);
       expect(session.user?.fullName, AppConstants.defaultFullName);
     });
 
-    test('kata sandi salah ditolak', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final SessionProvider session =
-          SessionProvider(authRepository: AuthRepository());
+    test('setInitialPin menolak bila PIN sudah dibuat', () async {
+      await resetKeTanpaPin();
+      final AuthRepository auth = AuthRepository();
 
-      expect(await session.login(userUji, 'sandi-salah'), isFalse);
+      expect(await auth.setInitialPin(pinUji), isTrue);
+      expect(await auth.setInitialPin('111111'), isFalse);
+      expect(await auth.loginWithPin(pinUji), isNotNull);
+    });
+
+    test('PIN salah ditolak', () async {
+      await resetKeTanpaPin();
+      await AuthRepository().setInitialPin(pinUji);
+      // Sesi baru (setara aplikasi dibuka ulang, belum masuk).
+      final SessionProvider session = await sesiBaru();
+
+      expect(await session.loginWithPin('1234'), isFalse);
       expect(session.isLoggedIn, isFalse);
       expect(session.errorMessage, isNotNull);
     });
 
-    test('username tidak terdaftar ditolak', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-      final SessionProvider session =
-          SessionProvider(authRepository: AuthRepository());
+    test('PIN lebih pendek dari panjang minimum ditolak', () async {
+      await resetKeTanpaPin();
+      await AuthRepository().setInitialPin(pinUji);
+      final SessionProvider session = await sesiBaru();
 
-      expect(await session.login('tidak-ada', sandiUji), isFalse);
+      expect(
+        await session.loginWithPin(
+          List<String>.filled(AppConstants.pinMinLength - 1, '1').join(),
+        ),
+        isFalse,
+      );
       expect(session.isLoggedIn, isFalse);
     });
 
@@ -243,7 +285,7 @@ await hapusSemuaDbTest();
   // ============================================================
 
   group('Layar Login', () {
-    smokeTest('form kosong divalidasi, provider tidak dipanggil', (
+    smokeTest('tanpa input PIN: provider tidak dipanggil', (
       WidgetTester tester,
     ) async {
       final _RekamAuth auth = _RekamAuth();
@@ -259,15 +301,16 @@ await hapusSemuaDbTest();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      await ketuk(tester, find.text('Masuk'));
+      expect(find.byType(TextFormField), findsNothing);
+      expect(find.text('1'), findsOneWidget, reason: 'Keypad PIN tidak tampil');
+
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(auth.panggil, isFalse, reason: 'Data kosong jangan diproses');
-      expect(find.byType(TextFormField), findsWidgets);
+      expect(auth.panggil, isFalse, reason: 'PIN kosong jangan diproses');
     });
 
-    smokeTest('kredensial ditolak: pesan error muncul ke pengguna', (
+    smokeTest('PIN salah: pesan error muncul ke pengguna', (
       WidgetTester tester,
     ) async {
       final _RekamAuth auth = _RekamAuth();
@@ -283,18 +326,133 @@ await hapusSemuaDbTest();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      await isi(tester, 'Username', userUji);
-      await isi(tester, 'Kata Sandi', 'sandi-salah');
-      await ketuk(tester, find.text('Masuk'));
+      for (final String digit in <String>['1', '2', '3', '4']) {
+        await ketuk(tester, find.text(digit));
+        await tester.pump();
+      }
+      // PIN tidak lagi dikirim otomatis setelah 4 digit karena panjangnya
+      // bebas; pengguna menekan ✓ setelah selesai mengetik.
+      await ketuk(tester, find.byKey(pinConfirmKey));
+      await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      expect(auth.panggil, isTrue);
+      expect(auth.panggil, isTrue, reason: 'PIN harus diproses saat ✓ ditekan');
       expect(
-        find.text('Login gagal. Periksa username/kata sandi.'),
-        findsWidgets,
-        reason: 'Login gagal tidak memberi pesan ke pengguna',
+        find.text('PIN salah. Coba lagi.'),
+        findsOneWidget,
+        reason: 'PIN salah tidak memberi pesan ke pengguna',
       );
+      expect(
+        find.text('1'),
+        findsOneWidget,
+        reason: 'PIN harus dikosongkan ulang setelah gagal',
+      );
+    });
+
+    smokeTest('PIN salah: mengetik ulang menghapus error (tidak stuck)', (
+      WidgetTester tester,
+    ) async {
+      final _RekamAuth auth = _RekamAuth();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: providers(SessionProvider(authRepository: auth)),
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const LoginScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      for (final String digit in <String>['1', '2', '3', '4']) {
+        await ketuk(tester, find.text(digit));
+        await tester.pump();
+      }
+      await ketuk(tester, find.byKey(pinConfirmKey));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('PIN salah. Coba lagi.'), findsOneWidget);
+
+      // Setelah gagal, pengguna harus bisa langsung memasukkan PIN baru:
+      // indikator & pesan error tidak boleh tetap "stuck" merah.
+      await ketuk(tester, find.text('5'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(
+        find.text('PIN salah. Coba lagi.'),
+        findsNothing,
+        reason: 'Error harus hilang begitu pengguna mulai mengetik ulang',
+      );
+    });
+  });
+
+  // ============================================================
+  // LAYAR BUAT PIN (pengguna baru — aplikasi tidak punya PIN bawaan)
+  // ============================================================
+
+  group('Layar Buat PIN', () {
+    Future<void> bukaBuatPin(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: providers(SessionProvider(authRepository: _RekamAuth())),
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const CreatePinScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Buat PIN'), findsOneWidget);
+    }
+
+    Future<void> ketikPin(WidgetTester tester, String pin) async {
+      for (final String digit in pin.split('')) {
+        await ketuk(tester, find.text(digit));
+        await tester.pump();
+      }
+    }
+
+    Future<void> konfirmasi(WidgetTester tester) async {
+      await ketuk(tester, find.byKey(pinConfirmKey));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    smokeTest('PIN terlalu pendek ditolak', (WidgetTester tester) async {
+      await bukaBuatPin(tester);
+
+      await ketikPin(tester, '12345');
+      await konfirmasi(tester);
+
+      expect(find.text('PIN minimal 6 digit.'), findsOneWidget);
+      expect(
+        find.text('Ulangi PIN'),
+        findsNothing,
+        reason: 'PIN pendek tidak boleh lanjut ke konfirmasi',
+      );
+    });
+
+    smokeTest('konfirmasi berbeda ditolak', (WidgetTester tester) async {
+      await bukaBuatPin(tester);
+
+      await ketikPin(tester, '927364');
+      await konfirmasi(tester);
+      expect(
+        find.text('Ulangi PIN'),
+        findsOneWidget,
+        reason: 'Harus berpindah ke langkah konfirmasi',
+      );
+
+      await ketikPin(tester, '927365');
+      await konfirmasi(tester);
+
+      expect(find.text('PIN tidak sama. Ketik ulang.'), findsOneWidget);
     });
   });
 
@@ -486,10 +644,7 @@ class _RekamAuth extends AuthRepository {
   bool panggil = false;
 
   @override
-  Future<UserModel?> login({
-    required String username,
-    required String password,
-  }) async {
+  Future<UserModel?> loginWithPin(String pin) async {
     panggil = true;
     return null;
   }

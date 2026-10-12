@@ -25,10 +25,12 @@ import 'repositories/pembayaran_repo.dart';
 import 'repositories/pengeluaran_repo.dart';
 import 'repositories/siswa_repo.dart';
 import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/login/create_pin_screen.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/payments/payments_screen.dart';
 import 'screens/settings/pengaturan_screen.dart';
+import 'screens/splash/splash_screen.dart';
 import 'screens/students/students_screen.dart';
 import 'services/backup_service.dart';
 
@@ -132,13 +134,28 @@ class KasBintangNusantaraApp extends StatelessWidget {
   }
 }
 
-/// Gatepintu utama: tampilkan LoginScreen jika belum masuk, MainScreen jika sudah.
-class RootGate extends StatelessWidget {
+/// Gatepintu utama: tampilkan splash animasi, lalu layar Buat PIN bila PIN
+/// belum pernah dibuat, LoginScreen bila sudah, MainScreen jika sudah masuk.
+class RootGate extends StatefulWidget {
   const RootGate({super.key});
+
+  @override
+  State<RootGate> createState() => _RootGateState();
+}
+
+class _RootGateState extends State<RootGate> {
+  bool _splashSelesai = false;
 
   @override
   Widget build(BuildContext context) {
     final SessionProvider session = context.watch<SessionProvider>();
+
+    // Splash animasi berjalan dulu (restore sesi berjalan paralel di belakang).
+    if (!_splashSelesai) {
+      return SplashScreen(
+        onFinished: () => setState(() => _splashSelesai = true),
+      );
+    }
 
     if (!session.hasTriedRestore) {
       // Masih memulihkan sesi → layar splash sederhana.
@@ -157,6 +174,8 @@ class RootGate extends StatelessWidget {
     }
 
     if (!session.isLoggedIn) {
+      // Belum pernah membuat PIN → wajib membuat PIN sendiri lebih dulu.
+      if (!session.isPinSet) return const CreatePinScreen();
       return const LoginScreen();
     }
 

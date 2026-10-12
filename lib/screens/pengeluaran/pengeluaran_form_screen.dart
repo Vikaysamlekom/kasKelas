@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/app_error.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/expense_category_model.dart';
@@ -122,7 +123,14 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        _snack('Gagal menyimpan: $e');
+        if (e is SaldoInsufficientException) {
+          _snack(
+            'Tidak bisa melanjutkan pengeluaran. Nominal melebihi pemasukan '
+            '(saldo tersedia ${Formatters.rupiah(e.saldo)}).',
+          );
+        } else {
+          _snack('Gagal menyimpan: $e');
+        }
       }
     }
   }

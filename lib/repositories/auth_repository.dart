@@ -6,24 +6,65 @@ import '../models/user_model.dart';
 class AuthRepository {
   final DBHelper _db = DBHelper.instance;
 
-  /// Verifikasi kredensial. Mengembalikan user jika berhasil, null jika gagal.
-  Future<UserModel?> login({required String username, required String password}) async {
-    final Map<String, Object?>? row = await _db.queryOne(
+  Future<Map<String, Object?>?> _activeUser() async {
+    final Map<String, Object?>? byName = await _db.queryOne(
       DBHelper.tblUsers,
       where: 'username = ? AND is_active = 1',
-      whereArgs: <Object?>[username.trim().toLowerCase()],
+      whereArgs: <Object?>[AppConstants.defaultUsername],
     );
+    return byName ??
+        await _db.queryOne(
+          DBHelper.tblUsers,
+          where: 'is_active = 1',
+        );
+  }
+
+  /// Apakah bendahara sudah membuat PIN-nya sendiri.
+  Future<bool> isPinSet() async {
+    final Map<String, Object?>? row = await _activeUser();
+    if (row == null) return false;
+    final String hash = (row['password_hash'] as String?) ?? '';
+    return hash.isNotEmpty;
+  }
+
+  /// Buat PIN pertama. Hanya berhasil bila belum ada PIN sama sekali,
+  /// sehingga PIN tidak bisa diganti lewat jalur ini.
+  Future<bool> setInitialPin(String pin) async {
+    if (pin.isEmpty) return false;
+    if (await isPinSet()) return false;
+
+    final Map<String, Object?>? row = await _activeUser();
+    if (row == null) return false;
+
+    final String now = DateTime.now().toIso8601String();
+    await _db.update(
+      DBHelper.tblUsers,
+      <String, Object?>{
+        'password_hash': DBHelper.hashPassword(pin, row['username'] as String),
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[row['id']],
+    );
+    return true;
+  }
+
+  /// Verifikasi PIN login. Mengembalikan user aktif bila PIN cocok.
+  ///
+  /// Bila PIN belum pernah dibuat (`password_hash` kosong) login selalu
+  /// ditolak — pengguna harus membuat PIN lebih dulu.
+  Future<UserModel?> loginWithPin(String pin) async {
+    if (pin.isEmpty) return null;
+
+    final Map<String, Object?>? row = await _activeUser();
     if (row == null) return null;
 
     final UserModel user = UserModel.fromMap(row);
-    final bool valid = DBHelper.verifyPassword(
-      password,
-      user.username,
-      user.passwordHash,
-    );
-    if (!valid) return null;
+    if (user.passwordHash == AppConstants.noPinHash) return null;
+    if (!DBHelper.verifyPassword(pin, user.username, user.passwordHash)) {
+      return null;
+    }
 
-    // Perbarui last_login
     await _db.update(
       DBHelper.tblUsers,
       <String, Object?>{
