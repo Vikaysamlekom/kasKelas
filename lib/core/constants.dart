@@ -28,6 +28,18 @@ class AppConstants {
 
   static const String defaultFullName = 'Bendahara SMK Bintang Nusantara';
   static const String defaultNip = '-';
+
+  // Pertanyaan keamanan bawaan untuk fitur Lupa PIN. Bendahara memilih
+  // dua pertanyaan lalu mengisi jawabannya (jawaban disimpan sebagai hash).
+  static const List<String> recoveryQuestions = <String>[
+    'Nama sahabat masa kecil?',
+    'Kota kelahiran ibu?',
+    'Sekolah dasar (SD) pertama?',
+    'Makanan favorit masa kecil?',
+    'Nama hewan peliharaan pertama?',
+    'Warna favorit?',
+    'Panggilan masa kecil Anda?',
+  ];
 }
 
 /// Batas rentang tanggal & tahun yang dipakai seluruh filter aplikasi.

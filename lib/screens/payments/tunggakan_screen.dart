@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/classes_provider.dart';
+import '../../providers/cash_types_provider.dart';
+import '../../models/cash_type_model.dart';
 import '../../providers/payment_provider.dart';
 import '../../repositories/pembayaran_repo.dart';
 import '../../utils/formatters.dart';
@@ -28,6 +30,7 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PaymentProvider>().loadTunggakan();
       context.read<ClassesProvider>().load();
+      context.read<CashTypesProvider>().load();
     });
   }
 
@@ -35,11 +38,20 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
   Widget build(BuildContext context) {
     final PaymentProvider provider = context.watch<PaymentProvider>();
     final ClassesProvider classes = context.watch<ClassesProvider>();
+    final CashTypesProvider cashTypes = context.watch<CashTypesProvider>();
 
     final List<TunggakanItem> items =
         _applyStatusFilter(provider.tunggakan, provider.tunggakanFilter.status);
     final int total =
         items.fold<int>(0, (int sum, TunggakanItem t) => sum + t.sisa);
+    // Nama jenis kas yang jadi dasar kewajiban pada tampilan ini.
+    String? namaKas;
+    for (final CashTypeModel c in cashTypes.cashTypes) {
+      if (c.id == provider.tunggakanFilter.cashTypeId) {
+        namaKas = c.name;
+        break;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tunggakan')),
@@ -67,7 +79,8 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${items.length} siswa belum melunasi kewajiban · '
+                      '${items.length} siswa belum melunasi '
+                      '${namaKas ?? 'kewajiban'} · '
                       '${Formatters.namaBulan(provider.tunggakanFilter.month ?? 0)} '
                       '${provider.tunggakanFilter.year ?? ''}',
                       style: AppText.caption.copyWith(
@@ -80,12 +93,26 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
             ),
             const SizedBox(height: 12),
 
-            // FILTER PERIODE / KELAS / JURUSAN
+            // FILTER JENIS KAS (dasar kewajiban) / PERIODE / KELAS / JURUSAN
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: <Widget>[
+                  FilterDropdown<int>(
+                    label: 'Jenis Kas',
+                    value: provider.tunggakanFilter.cashTypeId,
+                    items: cashTypes.cashTypes
+                        .where((CashTypeModel c) => c.isActive)
+                        .map((CashTypeModel c) => (c.name, c.id!))
+                        .toList(),
+                    onChanged: (int? v) {
+                      if (v != null && v > 0) {
+                        provider.applyTunggakanFilter(cashTypeId: v);
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
                   FilterDropdown<int>(
                     label: 'Bulan',
                     value: provider.tunggakanFilter.month,

@@ -28,6 +28,7 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/login/create_pin_screen.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/login/recovery_setup_sheet.dart';
 import 'screens/payments/payments_screen.dart';
 import 'screens/settings/pengaturan_screen.dart';
 import 'screens/splash/splash_screen.dart';
@@ -146,6 +147,22 @@ class RootGate extends StatefulWidget {
 class _RootGateState extends State<RootGate> {
   bool _splashSelesai = false;
 
+  /// Tawaran aktivasi pemulihan PIN hanya sekali per aplikasi terbuka.
+  bool _tawaranPemulihanSudah = false;
+
+  /// Setelah berhasil login, bila pemulihan PIN belum pernah diaktifkan,
+  /// tampilkan tawaran "Atur Sekarang" sekali agar Lupa PIN siap dipakai.
+  void _tawarkanPemulihanSekali() {
+    if (_tawaranPemulihanSudah) return;
+    _tawaranPemulihanSudah = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final SessionProvider session = context.read<SessionProvider>();
+      final RecoveryInfo info = await session.recoveryInfo();
+      if (!mounted || info.siap) return;
+      await showRecoveryPromptDialog(context, info: info);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final SessionProvider session = context.watch<SessionProvider>();
@@ -179,13 +196,20 @@ class _RootGateState extends State<RootGate> {
       return const LoginScreen();
     }
 
-    return const MainScreen(
-      pages: <Widget>[
-        DashboardScreen(),
-        StudentsScreen(),
-        PaymentsScreen(),
-        PengaturanScreen(),
-      ],
-    );
+    if (session.isLoggedIn) {
+      _tawarkanPemulihanSekali();
+      return const MainScreen(
+        pages: <Widget>[
+          DashboardScreen(),
+          StudentsScreen(),
+          PaymentsScreen(),
+          PengaturanScreen(),
+        ],
+      );
+    }
+
+    // Fallback defensif: harusnya tidak terjangkau karena cabang di atas
+    // sudah menangani isLoggedIn maupun belum.
+    return const LoginScreen();
   }
 }

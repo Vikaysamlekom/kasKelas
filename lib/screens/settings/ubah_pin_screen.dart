@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../database/db_helper.dart';
 import '../../providers/session_provider.dart';
 import '../../repositories/auth_repository.dart';
+import '../login/recovery_setup_sheet.dart';
 
 /// Layar Ubah PIN (kata sandi login bendahara).
 /// Verifikasi PIN lama memakai hash SHA-256 + salt username (lihat DBHelper).
@@ -27,6 +28,15 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
   bool _sembunyikan = true;
   bool _loading = false;
   String? _error;
+
+  /// Status pemulihan PIN (pertanyaan & kode) untuk kartu kelola.
+  RecoveryInfo? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _muatStatus();
+  }
 
   @override
   void dispose() {
@@ -104,6 +114,19 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
       ),
     );
     Navigator.of(context).pop(true);
+  }
+
+  Future<void> _bukaPemulihan() async {
+    final bool? tersimpan = await showRecoverySetupSheet(context);
+    if (tersimpan == true) {
+      // Muat ulang status setelah data pemulihan diubah.
+      setState(() => _muatStatus());
+    }
+  }
+
+  Future<void> _muatStatus() async {
+    _status = await _auth.recoveryInfo();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -202,6 +225,66 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
             ),
           ),
           const SizedBox(height: 12),
+
+          // KARTU PEMULIHAN PIN
+          Card(
+            elevation: 0,
+            color: AppColors.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.divider),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Icon(Icons.lock_reset_rounded,
+                          color: AppColors.navy),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Pemulihan PIN',
+                        style: AppText.sectionTitle.copyWith(fontSize: 15),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Digunakan di tombol "Lupa PIN?" pada halaman login.',
+                    style: AppText.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Builder(builder: (BuildContext context) {
+                    final RecoveryInfo? s = _status;
+                    return Wrap(
+                      spacing: 8,
+                      children: <Widget>[
+                        _ChipStatus(
+                          label: 'Pertanyaan',
+                          aktif: s?.questionsSet ?? false,
+                        ),
+                        _ChipStatus(label: 'Kode', aktif: s?.codeSet ?? false),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 14),
+                  OutlinedButton.icon(
+                    onPressed: _bukaPemulihan,
+                    icon: const Icon(Icons.settings_backup_restore_rounded),
+                    label: const Text('Atur Pertanyaan & Kode Pemulihan'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      foregroundColor: AppColors.navy,
+                      side: const BorderSide(color: AppColors.navy),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             elevation: 0,
             color: AppColors.background,
@@ -258,6 +341,33 @@ class _UbahPinScreenState extends State<UbahPinScreen> {
           ),
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+}
+
+/// Chip status aktif/nonaktif pemulihan PIN pada layar Ubah PIN.
+class _ChipStatus extends StatelessWidget {
+  final String label;
+  final bool aktif;
+
+  const _ChipStatus({required this.label, required this.aktif});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: (aktif ? AppColors.teal : AppColors.textMuted)
+            .withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$label: ${aktif ? 'Aktif' : 'Nonaktif'}',
+        style: AppText.caption.copyWith(
+          color: aktif ? AppColors.teal : AppColors.textMuted,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

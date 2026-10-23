@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../database/db_helper.dart';
+import '../models/cash_type_model.dart';
 import '../models/payment_model.dart';
 import '../models/student_model.dart';
 import '../repositories/cash_type_repo.dart';
@@ -17,12 +18,15 @@ class PaymentFilter {
   const PaymentFilter({this.year, this.month, this.classId});
 }
 
-/// Filter tunggakan (periode + kelas/jurusan + status).
+/// Filter tunggakan (periode + kelas/jurusan + jenis kas + status).
 class TunggakanFilter {
   final int? year;
   final int? month;
   final int? classId;
   final int? majorId;
+  /// Jenis kas aktif yang jadi dasar kewajiban. Wajib terisi agar
+  /// kewajiban/tunggakan dihitung per jenis kas (bukan total sum).
+  final int? cashTypeId;
   final String status; // '' = semua, 'belum', 'sebagian'
 
   const TunggakanFilter({
@@ -30,6 +34,7 @@ class TunggakanFilter {
     this.month,
     this.classId,
     this.majorId,
+    this.cashTypeId,
     this.status = '',
   });
 }
@@ -125,11 +130,26 @@ class PaymentProvider extends ChangeNotifier {
     _isLoadingTunggakan = true;
     notifyListeners();
     try {
+      // Kewajiban mengacu pada jenis kas terpilih. Bila belum ada pilihan,
+      // otomatis pakai jenis kas aktif pertama (urut nama).
+      if (_tunggakanFilter.cashTypeId == null) {
+        final List<CashTypeModel> aktif =
+            await cashTypeRepository.list(onlyActive: true);
+        _tunggakanFilter = TunggakanFilter(
+          year: _tunggakanFilter.year,
+          month: _tunggakanFilter.month,
+          classId: _tunggakanFilter.classId,
+          majorId: _tunggakanFilter.majorId,
+          cashTypeId: aktif.isNotEmpty ? aktif.first.id : null,
+          status: _tunggakanFilter.status,
+        );
+      }
       _tunggakan = await paymentRepository.listTunggakan(
         month: _tunggakanFilter.month,
         year: _tunggakanFilter.year,
         classId: _tunggakanFilter.classId,
         majorId: _tunggakanFilter.majorId,
+        cashTypeId: _tunggakanFilter.cashTypeId,
       );
     } catch (e) {
       _error = 'Gagal memuat tunggakan: $e';
@@ -144,27 +164,32 @@ class PaymentProvider extends ChangeNotifier {
     int? month,
     int? classId,
     int? majorId,
+    int? cashTypeId,
     String? status,
   }) async {
+    // 0 dipakai UI untuk "Semua"; cashTypeId = 0 tidak valid sehingga
+    // dipetakan ke null agar default otomatis (kas aktif pertama) kembali.
+    final int efektifKas = cashTypeId ?? _tunggakanFilter.cashTypeId ?? 0;
     _tunggakanFilter = TunggakanFilter(
       year: year ?? _tunggakanFilter.year,
       month: month ?? _tunggakanFilter.month,
       classId: classId ?? _tunggakanFilter.classId,
       majorId: majorId ?? _tunggakanFilter.majorId,
+      cashTypeId: efektifKas <= 0 ? null : efektifKas,
       status: status ?? _tunggakanFilter.status,
     );
     // 0 dipakai UI untuk "Semua".
     if (year != null && year == 0) {
-      _tunggakanFilter = TunggakanFilter(month: _tunggakanFilter.month, classId: _tunggakanFilter.classId, majorId: _tunggakanFilter.majorId, status: _tunggakanFilter.status);
+      _tunggakanFilter = TunggakanFilter(month: _tunggakanFilter.month, classId: _tunggakanFilter.classId, majorId: _tunggakanFilter.majorId, cashTypeId: _tunggakanFilter.cashTypeId, status: _tunggakanFilter.status);
     }
     if (month != null && month == 0) {
-      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, classId: _tunggakanFilter.classId, majorId: _tunggakanFilter.majorId, status: _tunggakanFilter.status);
+      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, classId: _tunggakanFilter.classId, majorId: _tunggakanFilter.majorId, cashTypeId: _tunggakanFilter.cashTypeId, status: _tunggakanFilter.status);
     }
     if (classId != null && classId == 0) {
-      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, month: _tunggakanFilter.month, majorId: _tunggakanFilter.majorId, status: _tunggakanFilter.status);
+      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, month: _tunggakanFilter.month, majorId: _tunggakanFilter.majorId, cashTypeId: _tunggakanFilter.cashTypeId, status: _tunggakanFilter.status);
     }
     if (majorId != null && majorId == 0) {
-      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, month: _tunggakanFilter.month, classId: _tunggakanFilter.classId, status: _tunggakanFilter.status);
+      _tunggakanFilter = TunggakanFilter(year: _tunggakanFilter.year, month: _tunggakanFilter.month, classId: _tunggakanFilter.classId, cashTypeId: _tunggakanFilter.cashTypeId, status: _tunggakanFilter.status);
     }
     await loadTunggakan();
   }
@@ -228,8 +253,20 @@ class PaymentProvider extends ChangeNotifier {
 
   Future<PaymentModel?> paymentById(int id) => paymentRepository.getById(id);
 
-  Future<PeriodStatus> monthlyStatus(int studentId, int month, int year) {
-    return paymentRepository.monthlyStatus(studentId, month, year);
+  /// Status pembayaran siswa pada periode terpilih untuk jenis kas
+  /// terpilih. Kewajiban = nominal jenis kas tersebut (bukan sum semua kas).
+  Future<PeriodStatus> monthlyStatus(
+    int studentId,
+    int month,
+    int year, {
+    required int cashTypeId,
+  }) {
+    return paymentRepository.monthlyStatus(
+      studentId,
+      month,
+      year,
+      cashTypeId: cashTypeId,
+    );
   }
 
   Future<int> kasPerBulan() => paymentRepository.kasPerBulan();

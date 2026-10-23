@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
-
 /// Kunci prefs untuk sesi login.
 class SessionPrefs {
   static const String loggedInUserId = 'logged_in_user_id';
@@ -68,6 +67,64 @@ class SessionProvider extends ChangeNotifier {
     }
     _isPinSet = true;
     return loginWithPin(pin);
+  }
+
+  // ------------------------------------------------------------------
+  // PEMULIHAN PIN (LUPA PIN)
+  // ------------------------------------------------------------------
+
+  /// Baca status pemulihan: pertanyaan keamanan & kode pemulihan tersedia?
+  Future<RecoveryInfo> recoveryInfo() => authRepository.recoveryInfo();
+
+  /// Simpan data pemulihan dari sheet setup (dipanggil saat sudah login).
+  Future<void> activateRecovery({
+    required String q1,
+    required String a1,
+    required String q2,
+    required String a2,
+    String? recoveryCode,
+  }) {
+    return authRepository.saveRecoverySetup(
+      q1: q1,
+      a1: a1,
+      q2: q2,
+      a2: a2,
+      recoveryCode: recoveryCode,
+    );
+  }
+
+  /// Reset PIN lewat pertanyaan keamanan. Jika berhasil, pengguna LANGSUNG
+  /// masuk aplikasi (identitas sudah terbukti lewat jawaban).
+  Future<ResetPinOutcome> resetPinViaQuestions({
+    required String answer1,
+    required String answer2,
+    required String newPin,
+  }) async {
+    final ResetPinOutcome outcome = await authRepository.resetPinViaQuestions(
+      answer1: answer1,
+      answer2: answer2,
+      newPin: newPin,
+    );
+    if (outcome.ok) {
+      await loginWithPin(newPin);
+    }
+    return outcome;
+  }
+
+  /// Reset PIN lewat kode pemulihan. Jika berhasil, langsung masuk aplikasi.
+  Future<ResetPinOutcome> resetPinViaRecoveryCode({
+    required String recoveryCode,
+    required String newPin,
+  }) async {
+    final ResetPinOutcome outcome =
+        await authRepository.resetPinViaRecoveryCode(
+      recoveryCode: recoveryCode,
+      newPin: newPin,
+    );
+    if (outcome.ok) {
+      await loginWithPin(newPin);
+    }
+    return outcome;
   }
 
   /// Dipanggil saat startup. Aplikasi selalu mewajibkan PIN setiap kali

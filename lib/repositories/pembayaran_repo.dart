@@ -4,8 +4,9 @@ import '../database/db_helper.dart';
 import '../models/cash_type_model.dart';
 import '../models/payment_model.dart';
 
-/// Status pembayaran satu siswa pada satu periode (bulan + tahun).
-/// Kewajiban (owed) dihitung dari jumlah kas berfrekuensi `bulanan`.
+/// Status pembayaran satu siswa pada satu periode (bulan + tahun) untuk
+/// SATU jenis kas yang sedang dipilih. Kewajiban (owed) = nominal dari
+/// jenis kas tersebut, bukan jumlah seluruh jenis kas.
 class PeriodStatus {
   final int owed;
   final int paid;
@@ -51,7 +52,9 @@ class PaymentRepository {
   final DBHelper _db = DBHelper.instance;
 
   /// Total kas per bulan (jumlah nominal jenis kas berfrekuensi `bulanan`
-  /// yang masih aktif) — menjadi kewajiban bulanan setiap siswa.
+  /// yang masih aktif). CATATAN: kini hanya dipakai laporan pembayaran
+  /// siswa. Status kewajiban per siswa di form & tunggakan memakai
+  /// nominal jenis kas terpilih (lihat [monthlyStatus] & [listTunggakan]).
   Future<int> kasPerBulan() async {
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       "SELECT COALESCE(SUM(amount), 0) AS s FROM ${DBHelper.tblCashTypes} "
@@ -90,7 +93,7 @@ class PaymentRepository {
     if (amount <= 0) {
       throw ArgumentError('Nominal pembayaran harus lebih dari 0.');
     }
-    final CashTypeModel? cashType = await _getCashType(cashTypeId);
+    final CashTypeModel? cashType = await getCashType(cashTypeId);
     if (cashType == null) {
       throw StateError('Jenis kas tidak ditemukan.');
     }
@@ -233,31 +236,39 @@ class PaymentRepository {
     return Sqflite.firstIntValue(rows) ?? 0;
   }
 
-  /// Status satu siswa pada periode (membandingkan total bayar vs
-  /// kas per bulan). Dipakai form: tampilkan status otomatis saat
-  /// siswa + periode dipilih.
+  /// Status satu siswa pada satu periode UNTUK SATU JENIS KAS TERPILIH.
+  /// Kewajiban = nominal jenis kas terpilih; total bayar hanya dihitung
+  /// dari pembayaran dengan cash_type_id yang sama (bukan sum semua kas).
+  /// Dipakai form pembayaran: tampilkan status otomatis saat siswa +
+  /// jenis kas + periode dipilih.
   Future<PeriodStatus> monthlyStatus(
     int studentId,
     int month,
-    int year,
-  ) async {
-    final int owed = await kasPerBulan();
+    int year, {
+    required int cashTypeId,
+  }) async {
+    final CashTypeModel? cashType = await getCashType(cashTypeId);
+    // Nominal kewajiban murni dari jenis kas yang dipilih.
+    final int owed = cashType?.amount ?? 0;
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS s FROM ${DBHelper.tblPayments} '
-      "WHERE student_id = ? AND month = ? AND year = ? AND status != '${PaymentStatus.batal}'",
-      <Object?>[studentId, month, year],
+      'WHERE student_id = ? AND cash_type_id = ? AND month = ? AND year = ? '
+      "AND status != '${PaymentStatus.batal}'",
+      <Object?>[studentId, cashTypeId, month, year],
     );
     final int paid = Sqflite.firstIntValue(rows) ?? 0;
     return _buildPeriodStatus(owed, paid);
   }
 
-  /// Daftar tunggakan siswa aktif pada periode terpilih.
-  /// Siswa tetap muncul walau belum membayar (paid = 0).
+  /// Daftar tunggakan siswa aktif pada periode terpilih untuk SATU JENIS
+  /// KAS TERPILIH. Siswa tetap muncul walau belum membayar (paid = 0),
+  /// dan kewajiban = nominal jenis kas tersebut (bukan sum semua kas).
   Future<List<TunggakanItem>> listTunggakan({
     int? month,
     int? year,
     int? classId,
     int? majorId,
+    int? cashTypeId,
   }) async {
     final List<String> where = <String>['s.is_active = 1', "s.status = 'aktif'"];
     final List<Object?> args = <Object?>[];
@@ -269,6 +280,11 @@ class PaymentRepository {
       where.add('COALESCE(s.major_id, c.major_id) = ?');
       args.add(majorId);
     }
+    // Kewajiban mengikuti nominal jenis kas yang dipilih; bila tidak ada
+    // jenis kas terpilih (belum ada kas aktif), kewajiban dianggap 0.
+    final CashTypeModel? cashType =
+        cashTypeId == null ? null : await getCashType(cashTypeId);
+    final int owed = cashType?.amount ?? 0;
 
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       '''
@@ -280,15 +296,15 @@ class PaymentRepository {
       LEFT JOIN ${DBHelper.tblMajors} m ON m.id = COALESCE(s.major_id, c.major_id)
       LEFT JOIN ${DBHelper.tblPayments} p ON p.student_id = s.id
         AND p.month = ? AND p.year = ?
+        AND p.cash_type_id = ?
         AND p.status != '${PaymentStatus.batal}'
       WHERE ${where.join(' AND ')}
       GROUP BY s.id
       ORDER BY c.level ASC, c.name ASC, s.name ASC
       ''',
-      <Object?>[month, year, ...args],
+      <Object?>[month, year, cashTypeId, ...args],
     );
 
-    final int owed = await kasPerBulan();
     return rows.map((Map<String, Object?> r) {
       final int paid = (r['paid'] as int?) ?? 0;
       final PeriodStatus st = _buildPeriodStatus(owed, paid);
@@ -306,7 +322,8 @@ class PaymentRepository {
     }).toList();
   }
 
-  Future<CashTypeModel?> _getCashType(int id) async {
+  /// Detail satu jenis kas berdasarkan id.
+  Future<CashTypeModel?> getCashType(int id) async {
     final Map<String, Object?>? row = await _db.queryOne(
       DBHelper.tblCashTypes,
       where: 'id = ?',

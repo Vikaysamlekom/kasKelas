@@ -193,6 +193,10 @@ class _JenisKasList extends StatelessWidget {
 
 String _frequencyLabel(String f) {
   switch (f) {
+    case PaymentFrequency.harian:
+      return 'Harian';
+    case PaymentFrequency.mingguan:
+      return 'Mingguan';
     case PaymentFrequency.bulanan:
       return 'Bulanan';
     case PaymentFrequency.semester:
@@ -200,7 +204,7 @@ String _frequencyLabel(String f) {
     case PaymentFrequency.tahunan:
       return 'Tahunan';
     case PaymentFrequency.sekali:
-      return 'Sekali';
+      return 'Sekali / Custom';
     default:
       return f;
   }
@@ -376,6 +380,14 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                 decoration: const InputDecoration(labelText: 'Frekuensi *'),
                 items: const <DropdownMenuItem<String>>[
                   DropdownMenuItem<String>(
+                    value: PaymentFrequency.harian,
+                    child: Text('Harian'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: PaymentFrequency.mingguan,
+                    child: Text('Mingguan'),
+                  ),
+                  DropdownMenuItem<String>(
                     value: PaymentFrequency.bulanan,
                     child: Text('Bulanan'),
                   ),
@@ -389,7 +401,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                   ),
                   DropdownMenuItem<String>(
                     value: PaymentFrequency.sekali,
-                    child: Text('Sekali / Sumbangan'),
+                    child: Text('Sekali / Custom'),
                   ),
                 ],
                 onChanged: (String? v) =>

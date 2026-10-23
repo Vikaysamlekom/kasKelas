@@ -281,6 +281,187 @@ await hapusSemuaDbTest();
   });
 
   // ============================================================
+  // PEMULIHAN PIN (Lupa PIN: pertanyaan keamanan + kode pemulihan)
+  // ============================================================
+
+  group('Pemulihan PIN', () {
+    final AuthRepository auth = AuthRepository();
+
+    /// Pasang PIN uji untuk pengguna bawaan (warna "sudah mendaftar PIN").
+    Future<void> pasangPinUji() async {
+      await DBHelper.instance.update(
+        DBHelper.tblUsers,
+        <String, Object?>{
+          'password_hash': DBHelper.hashPassword(pinUji, userUji),
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'username = ?',
+        whereArgs: <Object?>[userUji],
+      );
+    }
+
+    /// Bersihkan seluruh kunci pemulihan supaya tiap tes berdiri sendiri.
+    Future<void> hapusRecovery() => DBHelper.instance.delete(
+          DBHelper.tblSettings,
+          where: 'key LIKE ?',
+          whereArgs: const <Object?>['recovery%'],
+        );
+
+    setUp(() async {
+      await pasangPinUji();
+      await hapusRecovery();
+    });
+
+    tearDown(hapusRecovery);
+
+    test('normalisasi jawaban & kode konsisten', () {
+      expect(
+        AuthRepository.normalisasiJawaban('  Budi   Santoso  '),
+        'budi santoso',
+      );
+      expect(
+        AuthRepository.normalisasiKodePemulihan('8d2k9-7qw3x'),
+        '8D2K97QW3X',
+      );
+    });
+
+    test('setup tersimpan: pertanyaan terlihat, jawaban hanya berupa hash', () async {
+      await auth.saveRecoverySetup(
+        q1: AppConstants.recoveryQuestions.first,
+        a1: 'Budi Santoso',
+        q2: AppConstants.recoveryQuestions[1],
+        a2: 'BDG',
+        recoveryCode: '8D2K9-7QW3X',
+      );
+
+      final RecoveryInfo info = await auth.recoveryInfo();
+      expect(info.questionsSet, isTrue,
+          reason: 'Pertanyaan keamanan harus terpasang');
+      expect(info.q1, AppConstants.recoveryQuestions.first);
+      expect(info.codeSet, isTrue);
+      expect(info.siap, isTrue);
+
+      // Plain answer & kode tidak boleh disimpan apa adanya.
+      final List<Map<String, Object?>> rows = await DBHelper.instance.query(
+        DBHelper.tblSettings,
+        where: 'key LIKE ?',
+        whereArgs: const <Object?>['recovery%'],
+      );
+      for (final Map<String, Object?> row in rows) {
+        final String value = row['value'] as String;
+        expect(
+          value.toLowerCase(),
+          isNot(contains('budi santoso')),
+          reason: 'Jawaban tidak boleh tersimpan plain budi santoso',
+        );
+        expect(value, isNot('8D2K97QW3X'),
+            reason: 'Kode pemulihan tidak boleh tersimpan plain');
+      }
+    });
+
+    test('reset lewat pertanyaan keamanan yang benar sukses', () async {
+      await auth.saveRecoverySetup(
+        q1: 'P1',
+        a1: 'Selat Bandar',
+        q2: 'P2',
+        a2: 'Merah Putih',
+      );
+
+      final ResetPinOutcome hasil = await auth.resetPinViaQuestions(
+        answer1: ' selat  BANDAR ', // uji normalisasi spasi/huruf besar
+        answer2: 'MERAH   putih',
+        newPin: '777666',
+      );
+      expect(hasil.ok, isTrue,
+          reason: 'Jawaban yang benar (setelah normalisasi) harus diterima');
+
+      // PIN lama ditolak, PIN baru diterima.
+      expect(await auth.loginWithPin(pinUji), isNull);
+      expect(await auth.loginWithPin('777666'), isNotNull);
+    });
+
+    test('reset lewat kode pemulihan (huruf kecil & tanpa strip) sukses',
+        () async {
+      const String kode = '8D2K9-7QW3X';
+      await auth.saveRecoverySetup(
+        q1: 'P1',
+        a1: 'a1',
+        q2: 'P2',
+        a2: 'a2',
+        recoveryCode: kode,
+      );
+
+      final ResetPinOutcome gagal = await auth.resetPinViaRecoveryCode(
+        recoveryCode: 'ABCDEFG123',
+        newPin: '222222',
+      );
+      expect(gagal.error, RecoveryError.kodeSalah);
+
+      final ResetPinOutcome sukses = await auth.resetPinViaRecoveryCode(
+        recoveryCode: ' 8d2k97qw3x ',
+        newPin: '333333',
+      );
+      expect(sukses.ok, isTrue,
+          reason: 'Kode harus cocok walau huruf kecil/tanpa strip');
+      expect(await auth.loginWithPin('333333'), isNotNull);
+      expect(await auth.loginWithPin(pinUji), isNull);
+    });
+
+    test('pertanyaan/kode salah → percobaan dicatat → terkunci', () async {
+      await auth.saveRecoverySetup(
+        q1: 'P1',
+        a1: 'rahasia1',
+        q2: 'P2',
+        a2: 'rahasia2',
+        recoveryCode: '8D2K9-7QW3X',
+      );
+
+      for (int i = 1; i <= AuthRepository.maxRecoveryAttempts; i++) {
+        final ResetPinOutcome h = await auth.resetPinViaQuestions(
+          answer1: 'salah1',
+          answer2: 'salah2',
+          newPin: '111111',
+        );
+        expect(h.error, RecoveryError.jawabanSalah);
+      }
+
+      final RecoveryInfo info = await auth.recoveryInfo();
+      expect(info.lockedRemainingMinutes, greaterThan(0),
+          reason: 'Setelah 5x salah harus terkunci sementara');
+
+      // Jalur kode pun ikut terkunci (independen dari jalur pertanyaan).
+      final ResetPinOutcome viaKode = await auth.resetPinViaRecoveryCode(
+        recoveryCode: '8D2K9-7QW3X',
+        newPin: '999999',
+      );
+      expect(viaKode.error, RecoveryError.terkunci);
+
+      // Jalur benar pun ditolak selama terkunci.
+      final ResetPinOutcome jawabanBenar = await auth.resetPinViaQuestions(
+        answer1: 'rahasia1',
+        answer2: 'rahasia2',
+        newPin: '555555',
+      );
+      expect(jawabanBenar.error, RecoveryError.terkunci);
+    });
+
+    test('reset ditolak saat data pemulihan belum diatur', () async {
+      final ResetPinOutcome h = await auth.resetPinViaQuestions(
+        answer1: 'apa saja',
+        answer2: 'apa saja',
+        newPin: '123456',
+      );
+      expect(h.error, RecoveryError.belumDisetup);
+
+      final ResetPinOutcome kode = await auth.resetPinViaRecoveryCode(
+        recoveryCode: '8D2K9-7QW3X',
+        newPin: '123456',
+      );
+      expect(kode.error, RecoveryError.belumDisetup);
+    });
+  });
+
+  // ============================================================
   // LAYAR LOGIN
   // ============================================================
 

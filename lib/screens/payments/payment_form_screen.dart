@@ -31,6 +31,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
 
   int? _studentId;
   int? _cashTypeId;
+  CashTypeModel? _selectedCashType;
   int _month = DateTime.now().month;
   int _year = DateTime.now().year;
   late DateTime _paidDate;
@@ -65,13 +66,17 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   }
 
   Future<void> _refreshStatus() async {
-    if (_studentId == null) {
+    if (_studentId == null || _cashTypeId == null) {
       if (mounted) setState(() => _statusInfo = null);
       return;
     }
     final PaymentProvider provider = context.read<PaymentProvider>();
-    final PeriodStatus info =
-        await provider.monthlyStatus(_studentId!, _month, _year);
+    final PeriodStatus info = await provider.monthlyStatus(
+      _studentId!,
+      _month,
+      _year,
+      cashTypeId: _cashTypeId!,
+    );
     if (mounted && _studentId != null) {
       setState(() => _statusInfo = info);
     }
@@ -97,11 +102,22 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   }
 
   void _onCashTypeChanged(CashTypeModel? ct) {
-    setState(() => _cashTypeId = ct?.id);
-    if (ct != null && (_nominalController.text.isEmpty ||
-        ct.amount.toString() == _nominalController.text)) {
+    // Simpan objek jenis kas terpilih — kewajiban & status kartu di bawah
+    // mengikuti nominal jenis kas ini saja (bukan total semua jenis kas).
+    final CashTypeModel? previous = _selectedCashType;
+    setState(() {
+      _cashTypeId = ct?.id;
+      _selectedCashType = ct;
+    });
+    // Isi nominal otomatis hanya bila kosong atau masih bernilai nominal jenis
+    // kas sebelumnya (agar angka yang diketik manual tidak tertimpa).
+    final String text = _nominalController.text;
+    if (ct != null &&
+        (text.isEmpty ||
+            (previous != null && text == previous.amount.toString()))) {
       _nominalController.text = ct.amount.toString();
     }
+    _refreshStatus();
   }
 
   Future<void> _submit() async {
@@ -150,6 +166,68 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   void _snack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Kartu "Status Siswa Periode Ini": kewajiban mengikuti nominal jenis
+  /// kas yang dipilih (bukan total semua jenis kas).
+  Widget _buildStatusCard() {
+    final PeriodStatus? status = _statusInfo;
+    final CashTypeModel? kas = _selectedCashType;
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Status Siswa Periode Ini', style: AppText.caption),
+          const SizedBox(height: 8),
+          if (status == null || kas == null)
+            Text(
+              'Pilih siswa, jenis kas, & periode untuk melihat status '
+              'otomatis.',
+              style: AppText.bodySmall,
+            )
+          else if (status.owed <= 0) ...<Widget>[
+            Row(
+              children: <Widget>[
+                StatusBadge.pembayaran(PaymentStatus.belum),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Nominal ${kas.name} belum diatur. '
+                    'Atur nominal di menu Jenis Kas.',
+                    style: AppText.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ] else ...<Widget>[
+            Row(
+              children: <Widget>[
+                StatusBadge.pembayaran(status.status),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${kas.name} · '
+                    'Kewajiban ${Formatters.rupiah(status.owed)} · '
+                    'Total bayar ${Formatters.rupiah(status.paid)}',
+                    style: AppText.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              status.sisa == 0
+                  ? '${kas.name} periode ini sudah lunas.'
+                  : 'Sisa tunggakan: ${Formatters.rupiah(status.sisa)}',
+              style: AppText.caption.copyWith(
+                color: status.sisa == 0 ? AppColors.teal : AppColors.danger,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -377,47 +455,8 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               const SizedBox(height: 8),
 
               // INFO STATUS OTOMATIS (LUNAS / SEBAGIAN / BELUM BAYAR)
-              AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('Status Siswa Periode Ini', style: AppText.caption),
-                    const SizedBox(height: 8),
-                    if (_statusInfo == null)
-                      Text(
-                        'Pilih siswa & periode untuk melihat status otomatis.',
-                        style: AppText.bodySmall,
-                      )
-                    else ...<Widget>[
-                      Row(
-                        children: <Widget>[
-                          StatusBadge.pembayaran(_statusInfo!.status),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Total bayar ${Formatters.rupiah(_statusInfo!.paid)} '
-                              'vs kewajiban ${Formatters.rupiah(_statusInfo!.owed)}',
-                              style: AppText.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _statusInfo!.sisa == 0
-                            ? 'Kewajiban bulan ini sudah lunas.'
-                            : 'Sisa tunggakan: ${Formatters.rupiah(_statusInfo!.sisa)}',
-                        style: AppText.caption.copyWith(
-                          color: _statusInfo!.sisa == 0
-                              ? AppColors.teal
-                              : AppColors.danger,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              // Nilai kewajiban mengacu pada JENIS KAS TERPILIH saja.
+              _buildStatusCard(),
               const SizedBox(height: 20),
 
               // SIMPAN

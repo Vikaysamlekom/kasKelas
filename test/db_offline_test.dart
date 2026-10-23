@@ -312,7 +312,89 @@ void main() {
 
       await pembayaran.voidPayment(p.id, reason: 'Salah input nominal');
       expect((await dashboard.getSummary()).saldo, 0);
-      expect((await pembayaran.monthlyStatus(siswaId, now.month, now.year)).status, PaymentStatus.belum);
+      expect(
+        (await pembayaran.monthlyStatus(
+          siswaId,
+          now.month,
+          now.year,
+          cashTypeId: kasBulananId,
+        )).status,
+        PaymentStatus.belum,
+      );
+    });
+
+    test('kewajiban mengikuti jenis kas terpilih (bukan total sum)', () async {
+      await setKasBulananAmount(25000);
+      final int kasSosialId =
+          (await DBHelper.instance.query(
+            DBHelper.tblCashTypes,
+            where: 'code = ?',
+            whereArgs: <Object?>['SOSIAL'],
+          )).first['id'] as int;
+      await DBHelper.instance.update(
+        DBHelper.tblCashTypes,
+        <String, Object?>{'amount': 10000},
+        where: 'id = ?',
+        whereArgs: <Object?>[kasSosialId],
+      );
+
+      // Belum bayar: sisa tunggakan = nominal jenis kas terpilih saja.
+      final dynamic belum = await pembayaran.monthlyStatus(
+        siswaId,
+        now.month,
+        now.year,
+        cashTypeId: kasSosialId,
+      );
+      expect(belum.owed, 10000);
+      expect(belum.paid, 0);
+      expect(belum.sisa, 10000);
+      expect(belum.status, PaymentStatus.belum);
+
+      // Bayar kas bulanan PENUH — status kas sosial tetap belum karena
+      // total bayar dihitung hanya untuk jenis kas terkait.
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasBulananId,
+        amount: 25000,
+        month: now.month,
+        year: now.year,
+        paidDate: hariIni,
+        recordedBy: userId,
+      );
+      final dynamic sosial = await pembayaran.monthlyStatus(
+        siswaId,
+        now.month,
+        now.year,
+        cashTypeId: kasSosialId,
+      );
+      expect(sosial.paid, 0);
+      expect(sosial.status, PaymentStatus.belum);
+      expect(sosial.sisa, 10000);
+
+      final dynamic bulanan = await pembayaran.monthlyStatus(
+        siswaId,
+        now.month,
+        now.year,
+        cashTypeId: kasBulananId,
+      );
+      expect(bulanan.owed, 25000);
+      expect(bulanan.paid, 25000);
+      expect(bulanan.status, PaymentStatus.lunas);
+
+      // Tunggakan juga per jenis kas: kas sosial belum dibayar → muncul
+      // dengan sisa 10.000, bukan total gabungan.
+      final List<TunggakanItem> tunggakanSosial = await pembayaran
+          .listTunggakan(
+        month: now.month,
+        year: now.year,
+        cashTypeId: kasSosialId,
+      );
+      expect(tunggakanSosial.length, 1);
+      expect(tunggakanSosial.first.studentId, siswaId);
+      expect(tunggakanSosial.first.owed, 10000);
+      expect(tunggakanSosial.first.paid, 0);
+      expect(tunggakanSosial.first.sisa, 10000);
+      expect(tunggakanSosial.first.status, PaymentStatus.belum);
     });
 
     test('kode transaksi tidak bentrok setelah pembatalan', () async {

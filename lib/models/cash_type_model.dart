@@ -52,6 +52,8 @@ class CashTypeModel {
 }
 
 class PaymentFrequency {
+  static const String harian = 'harian';
+  static const String mingguan = 'mingguan';
   static const String bulanan = 'bulanan';
   static const String semester = 'semester';
   static const String tahunan = 'tahunan';

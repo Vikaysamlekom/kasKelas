@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/pin_entry.dart';
+import 'forgot_pin_screen.dart';
 
 /// Halaman masuk bendahara: memasukkan PIN yang dibuat sendiri oleh pengguna.
 ///
@@ -33,6 +34,17 @@ class _LoginScreenState extends State<LoginScreen> {
   void _resetError() {
     if (!mounted) return;
     context.read<SessionProvider>().clearError();
+  }
+
+  /// Buka alur Lupa PIN (pertanyaan keamanan / kode pemulihan).
+  Future<void> _bukaLupaPin() async {
+    _focusNode.unfocus();
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (BuildContext context) {
+        return const ForgotPinScreen();
+      }),
+    );
+    if (mounted) _focusNode.requestFocus();
   }
 
   void _appendDigit(String digit) {
@@ -161,6 +173,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       onBackspace: _backspace,
                       onConfirm: _submit,
                     ),
+                    const SizedBox(height: 8),
+
+                    // LUPA PIN
+                    TextButton.icon(
+                      onPressed: _bukaLupaPin,
+                      icon: const Icon(Icons.lock_reset_rounded, size: 18),
+                      label: const Text('Lupa PIN?'),
+                    ),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
