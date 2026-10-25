@@ -75,10 +75,7 @@ class PdfService {
             ('Kelas', p.className ?? '-'),
             ('Jenis Kas', p.cashTypeName ?? '-'),
             ('Periode', '${Formatters.namaBulan(p.month)} ${p.year}'),
-            (
-              'Nominal',
-              'Rp ${Formatters.angka(p.amount)}',
-            ),
+            ('Nominal', 'Rp ${Formatters.angka(p.amount)}'),
             ('Status', PaymentStatus.label(p.status)),
             ('Tanggal Bayar', Formatters.tanggalIso(p.paidDate)),
             ('Metode', _methodLabel(p.paymentMethod)),
@@ -97,10 +94,7 @@ class PdfService {
                 1: pw.FlexColumnWidth(3),
               },
               border: pw.TableBorder(
-                horizontalInside: pw.BorderSide(
-                  color: PdfColors.grey200,
-                  width: 0.5,
-                ),
+                horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
               ),
               children: <pw.TableRow>[
                 for (final (String label, String value) in rows)
@@ -111,10 +105,7 @@ class PdfService {
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           label,
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            color: PdfColors.grey700,
-                          ),
+                          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                         ),
                       ),
                       pw.Padding(
@@ -145,10 +136,7 @@ class PdfService {
                   style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                 ),
                 pw.SizedBox(height: 4),
-                pw.Text(
-                  'Bendahara',
-                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
-                ),
+                pw.Text('Bendahara', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
                 pw.SizedBox(height: 56),
                 pw.Text(
                   bendahara,
@@ -167,23 +155,14 @@ class PdfService {
               pw.Divider(color: PdfColors.grey300),
               pw.SizedBox(height: 6),
               pw.Text(
-                'Dokumen ini dibuat otomatis oleh aplikasi Kas Bintang Nusantara.\n'
-                'Harap simpan untuk keperluan administrasi.',
-                style: pw.TextStyle(
-                  fontSize: 8,
-                  color: PdfColors.grey500,
-                ),
+                'Dokumen ini dibuat otomatis oleh aplikasi Kas Bintang Nusantara.',
+                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
                 textAlign: pw.TextAlign.center,
               ),
             ],
           );
 
-          return <pw.Widget>[
-            header,
-            table,
-            signature,
-            footer,
-          ];
+          return <pw.Widget>[header, table, signature, footer];
         },
       ),
     );
