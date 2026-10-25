@@ -6,16 +6,19 @@ import 'package:kas_bintang_nusantara/core/constants.dart';
 import 'package:kas_bintang_nusantara/core/theme.dart';
 import 'package:kas_bintang_nusantara/database/db_helper.dart';
 import 'package:kas_bintang_nusantara/models/user_model.dart';
+import 'package:kas_bintang_nusantara/models/school_profile_model.dart';
 import 'package:kas_bintang_nusantara/providers/classes_provider.dart';
 import 'package:kas_bintang_nusantara/providers/navigation_provider.dart';
 import 'package:kas_bintang_nusantara/providers/session_provider.dart';
 import 'package:kas_bintang_nusantara/providers/students_provider.dart';
 import 'package:kas_bintang_nusantara/repositories/auth_repository.dart';
 import 'package:kas_bintang_nusantara/repositories/kelas_repo.dart';
+import 'package:kas_bintang_nusantara/repositories/school_profile_repo.dart';
 import 'package:kas_bintang_nusantara/repositories/siswa_repo.dart';
 import 'package:kas_bintang_nusantara/screens/login/create_pin_screen.dart';
 import 'package:kas_bintang_nusantara/screens/login/login_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/profil_sekolah_screen.dart';
+import 'package:kas_bintang_nusantara/screens/settings/pengaturan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/ubah_pin_screen.dart';
 import 'package:kas_bintang_nusantara/widgets/pin_entry.dart';
 import 'package:path/path.dart' as p;
@@ -757,6 +760,18 @@ Future<void> bukaProfil(WidgetTester tester) async {
       await siapAsync(tester);
     }
 
+    smokeTest('pratinjau bendahara mengikuti nama yang diedit', (
+      WidgetTester tester,
+    ) async {
+      await bukaProfil(tester);
+
+      expect(find.text(AppConstants.defaultFullName), findsWidgets);
+      await isi(tester, 'Nama Bendahara', 'Rina Andini');
+
+      expect(find.text('Rina Andini'), findsWidgets);
+      expect(find.text('RA'), findsOneWidget);
+    });
+
     smokeTest('nama sekolah kosong ditolak', (WidgetTester tester) async {
       await bukaProfil(tester);
 
@@ -813,6 +828,35 @@ expect(
           <Map<String, Object?>>[];
       expect(rows, isNotEmpty, reason: 'Profil tidak tersimpan ke database');
       expect(rows.first['email'], 'info@nusantara.sch.id');
+    });
+  });
+
+  group('Menu Lainnya', () {
+    smokeTest('menampilkan nama bendahara dari profil sekolah', (
+      WidgetTester tester,
+    ) async {
+      await tester.runAsync(() async {
+        await SchoolProfileRepository().saveProfile(
+          SchoolProfileModel(
+            schoolName: 'SMK Uji',
+            treasurer: 'Bendahara Menu Uji',
+            updatedAt: DateTime.now(),
+          ),
+        );
+      });
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: providers(SessionProvider(authRepository: _RekamAuth())),
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const PengaturanScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await siapAsync(tester);
+
+      expect(find.text('Bendahara Menu Uji'), findsOneWidget);
     });
   });
 }

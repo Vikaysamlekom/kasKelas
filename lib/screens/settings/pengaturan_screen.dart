@@ -5,6 +5,7 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../database/db_helper.dart';
 import '../../providers/session_provider.dart';
+import '../../repositories/school_profile_repo.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../pengeluaran/pengeluaran_screen.dart';
 import '../payments/tunggakan_screen.dart';
@@ -15,8 +16,39 @@ import 'profil_sekolah_screen.dart';
 import 'ubah_pin_screen.dart';
 
 /// Tab "Lainnya" — menu pengaturan & shortcut navigasi.
-class PengaturanScreen extends StatelessWidget {
+class PengaturanScreen extends StatefulWidget {
   const PengaturanScreen({super.key});
+
+  @override
+  State<PengaturanScreen> createState() => _PengaturanScreenState();
+}
+
+class _PengaturanScreenState extends State<PengaturanScreen> {
+  final SchoolProfileRepository _schoolProfileRepository =
+      SchoolProfileRepository();
+  String? _namaBendahara;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNamaBendahara();
+  }
+
+  Future<void> _loadNamaBendahara() async {
+    try {
+      final profile = await _schoolProfileRepository.getProfile();
+      if (!mounted) return;
+      final String? nama = profile?.treasurer?.trim();
+      setState(() {
+        _namaBendahara = nama != null && nama.isNotEmpty ? nama : null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat profil bendahara: $error')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,17 +59,17 @@ class PengaturanScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: <Widget>[
-          _kartuUser(session),
+          _kartuUser(session, _namaBendahara ?? session.user?.fullName ?? '-'),
           const SizedBox(height: 16),
           _label('PENGATURAN'),
           _tile(
             icon: Icons.school_outlined,
             title: 'Profil Sekolah',
             subtitle: 'Nama, alamat, kontak, logo, bendahara',
-            onTap: () => _push<void>(
-              context,
-              const ProfilSekolahScreen(),
-            ),
+            onTap: () async {
+              await _push<void>(context, const ProfilSekolahScreen());
+              if (mounted) await _loadNamaBendahara();
+            },
           ),
           _tile(
             icon: Icons.pin_rounded,
@@ -146,7 +178,7 @@ class PengaturanScreen extends StatelessWidget {
     await session.logout();
   }
 
-  Widget _kartuUser(SessionProvider session) {
+  Widget _kartuUser(SessionProvider session, String namaBendahara) {
     return Card(
       elevation: 0,
       color: AppColors.navy,
@@ -175,7 +207,7 @@ class PengaturanScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    session.user?.fullName ?? '-',
+                    namaBendahara,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
