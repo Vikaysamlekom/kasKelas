@@ -4,8 +4,12 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/navigation_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../repositories/dashboard_repository.dart';
+import '../pengeluaran/pengeluaran_screen.dart';
+import '../settings/profil_sekolah_screen.dart';
+import '../transactions/riwayat_transaksi_screen.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/class_progress_tile.dart';
@@ -51,15 +55,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             actions: <Widget>[
               Padding(
                 padding: const EdgeInsets.only(right: 16),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppColors.navy,
-                  child: Text(
-                    _initial(bendahara ?? 'B'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                child: IconButton(
+                  tooltip: 'Buka profil sekolah',
+                  onPressed: () => _openScreen(context, const ProfilSekolahScreen()),
+                  icon: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.navy,
+                    child: Text(
+                      _initial(bendahara ?? 'B'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -103,6 +111,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     pengeluaranBulanIni: dashboard.summary!.pengeluaranBulanIni,
                     transaksiHariIni: dashboard.summary!.transaksiHariIni,
                     periodeLabel: periode,
+                    onSaldoTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
+                    onPemasukanTap: () =>
+                        context.read<NavigationProvider>().setIndex(NavigationIndex.payments),
+                    onPengeluaranTap: () => _openScreen(context, const PengeluaranScreen()),
+                    onTransaksiTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
                   ),
                   const SizedBox(height: 24),
 
@@ -130,6 +143,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               totalStudents: c.totalStudents,
                               paidStudents: c.paidStudents,
                               percent: c.percent,
+                              onTap: () => context.read<NavigationProvider>().setIndex(
+                                NavigationIndex.students,
+                              ),
                             ),
                         ],
                       ],
@@ -154,5 +170,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (parts.isEmpty) return 'B';
     if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
     return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  void _openScreen(BuildContext context, Widget screen) {
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => screen));
   }
 }
