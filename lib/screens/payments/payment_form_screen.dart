@@ -112,9 +112,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     // Isi nominal otomatis hanya bila kosong atau masih bernilai nominal jenis
     // kas sebelumnya (agar angka yang diketik manual tidak tertimpa).
     final String text = _nominalController.text;
-    if (ct != null &&
-        (text.isEmpty ||
-            (previous != null && text == previous.amount.toString()))) {
+    if (ct != null && (text.isEmpty || (previous != null && text == previous.amount.toString()))) {
       _nominalController.text = ct.amount.toString();
     }
     _refreshStatus();
@@ -144,15 +142,12 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         year: _year,
         paidDate: _paidDate.toIso8601String(),
         paymentMethod: PaymentMethod.tunai,
-        note: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
         userId: userId,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pembayaran berhasil dicatat.')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Pembayaran berhasil dicatat.')));
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -164,9 +159,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Kartu "Status Siswa Periode Ini": kewajiban mengikuti nominal jenis
@@ -271,7 +264,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Belum ada siswa aktif. Tambahkan siswa di menu Siswa dulu.',
+                    'Belum ada siswa aktif. Tambahkan siswa di menu Siswa.',
                     style: AppText.caption.copyWith(color: AppColors.danger),
                   ),
                 ),
@@ -286,13 +279,14 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                 ),
                 items: cashTypes.cashTypes
                     .where((CashTypeModel c) => c.isActive)
-                    .map((CashTypeModel c) => DropdownMenuItem<int>(
-                          value: c.id,
-                          child: Text('${c.name} · ${Formatters.rupiah(c.amount)}'),
-                        ))
+                    .map(
+                      (CashTypeModel c) => DropdownMenuItem<int>(
+                        value: c.id,
+                        child: Text('${c.name} · ${Formatters.rupiah(c.amount)}'),
+                      ),
+                    )
                     .toList(),
-                validator: (int? v) =>
-                    v == null ? 'Jenis kas wajib dipilih' : null,
+                validator: (int? v) => v == null ? 'Jenis kas wajib dipilih' : null,
                 onChanged: (int? v) {
                   CashTypeModel? ct;
                   for (final CashTypeModel c in cashTypes.cashTypes) {
@@ -311,11 +305,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                     cashTypes.isLoading
                         ? 'Memuat jenis kas...'
                         : 'Belum ada jenis kas aktif. Tambahkan dari menu '
-                              'Siswa > Jenis Kas dulu.',
+                              'Siswa > Jenis Kas.',
                     style: AppText.caption.copyWith(
-                      color: cashTypes.isLoading
-                          ? AppColors.textMuted
-                          : AppColors.danger,
+                      color: cashTypes.isLoading ? AppColors.textMuted : AppColors.danger,
                     ),
                   ),
                 ),
@@ -335,10 +327,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                       ),
                       items: <DropdownMenuItem<int>>[
                         for (int m = 1; m <= 12; m++)
-                          DropdownMenuItem<int>(
-                            value: m,
-                            child: Text(Formatters.namaBulan(m)),
-                          ),
+                          DropdownMenuItem<int>(value: m, child: Text(Formatters.namaBulan(m))),
                       ],
                       onChanged: (int? v) {
                         if (v != null) {
@@ -381,10 +370,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                     labelText: 'Tanggal Bayar *',
                     prefixIcon: Icon(Icons.event_available_outlined),
                   ),
-                  child: Text(
-                    Formatters.tanggal(_paidDate),
-                    style: AppText.body,
-                  ),
+                  child: Text(Formatters.tanggal(_paidDate), style: AppText.body),
                 ),
               ),
               const SizedBox(height: 16),
@@ -393,9 +379,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               TextFormField(
                 controller: _nominalController,
                 keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
+                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
                   labelText: 'Nominal *',
                   prefixIcon: Icon(Icons.payments_outlined),
@@ -431,8 +415,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: <Widget>[
-                    const Icon(Icons.badge_outlined,
-                        color: AppColors.textMuted, size: 20),
+                    const Icon(Icons.badge_outlined, color: AppColors.textMuted, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -442,9 +425,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                           const SizedBox(height: 2),
                           Text(
                             session.user?.fullName ?? '-',
-                            style: AppText.body.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: AppText.body.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -461,10 +442,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
 
               // SIMPAN
               _isSaving
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
+                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
                   : FilledButton.icon(
                       onPressed: _submit,
                       icon: const Icon(Icons.check_rounded),

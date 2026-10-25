@@ -18,7 +18,7 @@ class PinDots extends StatelessWidget {
   final bool hasError;
 
   /// Jumlah titik minimum saat PIN masih kosong.
-  static const int minDots = 4;
+  static const int minDots = AppConstants.pinMinLength;
 
   @override
   Widget build(BuildContext context) {

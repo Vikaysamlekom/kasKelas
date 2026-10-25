@@ -38,8 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final DashboardProvider dashboard = context.watch<DashboardProvider>();
     final String? bendahara = context.read<SessionProvider>().user?.fullName;
     final DateTime now = DateTime.now();
-    final String periode =
-        '${Formatters.namaBulanPendek(now.month)} ${now.year}';
+    final String periode = '${Formatters.namaBulanPendek(now.month)} ${now.year}';
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -73,10 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: <Widget>[
                 // ---------- RINGKASAN KEUANGAN ----------
                 if (dashboard.isLoading && dashboard.summary == null)
-                  const AppCard(
-                    padding: EdgeInsets.symmetric(vertical: 56),
-                    child: AppLoading(),
-                  )
+                  const AppCard(padding: EdgeInsets.symmetric(vertical: 56), child: AppLoading())
                 else if (dashboard.summary == null)
                   AppCard(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -125,8 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const EmptyState(
                             icon: Icons.group_outlined,
                             title: 'Belum ada data kelas',
-                            message:
-                                'Tambahkan kelas & siswa pada menu Siswa (Fase 2).',
+                            message: 'Tambahkan kelas & siswa pada menu Siswa.',
                           )
                         else ...<Widget>[
                           for (final ClassProgress c in dashboard.classProgress)

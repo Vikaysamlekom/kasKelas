@@ -26,8 +26,7 @@ class KelasScreen extends StatefulWidget {
   State<KelasScreen> createState() => _KelasScreenState();
 }
 
-class _KelasScreenState extends State<KelasScreen>
-    with SingleTickerProviderStateMixin {
+class _KelasScreenState extends State<KelasScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
   @override
@@ -65,16 +64,12 @@ class _KelasScreenState extends State<KelasScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const <Widget>[
-          _KelasTab(),
-          _JurusanTab(),
-        ],
+        children: const <Widget>[_KelasTab(), _JurusanTab()],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab-kelas-jurusan',
-        onPressed: () => _diTabJurusan
-            ? _JurusanTab.openForm(context)
-            : _KelasTab.openForm(context),
+        onPressed: () =>
+            _diTabJurusan ? _JurusanTab.openForm(context) : _KelasTab.openForm(context),
         icon: const Icon(Icons.add_rounded),
         label: Text(_diTabJurusan ? 'Tambah Jurusan' : 'Tambah Kelas'),
       ),
@@ -90,10 +85,7 @@ class _KelasTab extends StatelessWidget {
   const _KelasTab();
 
   /// Buka form tambah/ubah kelas. Mengembalikan id kelas yang tersimpan.
-  static Future<int?> openForm(
-    BuildContext context, {
-    ClassWithMeta? existing,
-  }) async {
+  static Future<int?> openForm(BuildContext context, {ClassWithMeta? existing}) async {
     final ClassesProvider provider = context.read<ClassesProvider>();
     final int? savedId = await showModalBottomSheet<int>(
       context: context,
@@ -112,7 +104,7 @@ class _KelasTab extends StatelessWidget {
       title: 'Hapus Kelas',
       message: item.studentCount > 0
           ? 'Kelas ${item.kelas.name} masih dipakai ${item.studentCount} siswa '
-              'aktif.\nKelas akan diubah menjadi NONAKTIF.'
+                'aktif.\nKelas akan diubah menjadi NONAKTIF.'
           : 'Hapus kelas ${item.kelas.name}?\nData tidak bisa dikembalikan.',
       confirmLabel: 'Ya',
     );
@@ -164,10 +156,9 @@ class _KelasTab extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: (c.kelas.isActive
-                          ? AppColors.navy
-                          : AppColors.textMuted)
-                      .withValues(alpha: 0.10),
+                  color: (c.kelas.isActive ? AppColors.navy : AppColors.textMuted).withValues(
+                    alpha: 0.10,
+                  ),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -278,10 +269,7 @@ class _KelasFormState extends State<_KelasForm> {
     try {
       // Kolom nama kelas punya batasan UNIQUE: cek dulu agar pengguna
       // mendapat pesan jelas, bukan error database yang membingungkan.
-      if (await ClassRepository().classNameExists(
-        nama,
-        excludeId: widget.existing?.kelas.id,
-      )) {
+      if (await ClassRepository().classNameExists(nama, excludeId: widget.existing?.kelas.id)) {
         if (!mounted) return;
         setState(() => _saving = false);
         _pesan('Nama kelas "$nama" sudah dipakai. Gunakan nama lain.');
@@ -298,9 +286,8 @@ class _KelasFormState extends State<_KelasForm> {
         userId: userId,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Kelas "$nama" tersimpan.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Kelas "$nama" tersimpan.')));
       Navigator.of(context).pop(id);
     } catch (e) {
       if (!mounted) return;
@@ -311,18 +298,12 @@ class _KelasFormState extends State<_KelasForm> {
 
   void _pesan(String text, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: error ? AppColors.danger : null,
-        content: Text(text, maxLines: 3),
-      ),
+      SnackBar(backgroundColor: error ? AppColors.danger : null, content: Text(text, maxLines: 3)),
     );
   }
 
   void _tampilPesanGagal(String judul, Object e) {
-    _pesan(
-      e is AppException ? e.message : pesanErrorUmum(e, judul),
-      error: true,
-    );
+    _pesan(e is AppException ? e.message : pesanErrorUmum(e, judul), error: true);
   }
 
   /// Buat jurusan baru langsung dari form kelas, lalu pilih otomatis.
@@ -346,15 +327,9 @@ class _KelasFormState extends State<_KelasForm> {
       opsiJurusan.add(m);
     }
     if (_majorId != null && !opsiJurusan.any((MajorWithMeta m) => m.major.id == _majorId)) {
-      opsiJurusan.add(
-        MajorWithMeta(
-          major: context.read<ClassesProvider>().majorById(_majorId)!,
-        ),
-      );
+      opsiJurusan.add(MajorWithMeta(major: context.read<ClassesProvider>().majorById(_majorId)!));
     }
-    final String sidikJariJurusan = opsiJurusan
-        .map((MajorWithMeta m) => m.major.id)
-        .join('-');
+    final String sidikJariJurusan = opsiJurusan.map((MajorWithMeta m) => m.major.id).join('-');
 
     return Padding(
       padding: EdgeInsets.only(
@@ -370,17 +345,14 @@ class _KelasFormState extends State<_KelasForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(
-                widget.existing == null ? 'Tambah Kelas' : 'Ubah Kelas',
-                style: AppText.title,
-              ),
+              Text(widget.existing == null ? 'Tambah Kelas' : 'Ubah Kelas', style: AppText.title),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _name,
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nama Kelas *',
-                  hintText: 'Contoh: XII RPL 1',
+                  hintText: 'Contoh: XII TKJ 1',
                 ),
                 validator: (String? v) {
                   final String value = v?.trim() ?? '';
@@ -407,18 +379,12 @@ class _KelasFormState extends State<_KelasForm> {
                 key: ValueKey<String>('jurusan-$_majorId-$sidikJariJurusan'),
                 initialValue: _majorId,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Jurusan',
-                  hintText: 'Opsional',
-                ),
+                decoration: const InputDecoration(labelText: 'Jurusan', hintText: 'Opsional'),
                 items: opsiJurusan
                     .map(
                       (MajorWithMeta m) => DropdownMenuItem<int>(
                         value: m.major.id,
-                        child: Text(
-                          m.major.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(m.major.name, overflow: TextOverflow.ellipsis),
                       ),
                     )
                     .toList(),
@@ -431,9 +397,7 @@ class _KelasFormState extends State<_KelasForm> {
                   onPressed: _buatJurusan,
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: Text(
-                    majors.isEmpty
-                        ? 'Belum ada jurusan? Buat sekarang'
-                        : 'Tambah jurusan lain',
+                    majors.isEmpty ? 'Belum ada jurusan? Buat sekarang' : 'Tambah jurusan lain',
                   ),
                 ),
               ),
@@ -441,17 +405,11 @@ class _KelasFormState extends State<_KelasForm> {
               TextFormField(
                 controller: _wali,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Wali Kelas',
-                  hintText: 'Opsional',
-                ),
+                decoration: const InputDecoration(labelText: 'Wali Kelas', hintText: 'Opsional'),
               ),
               const SizedBox(height: 20),
               _saving
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
+                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
                   : FilledButton(onPressed: _save, child: const Text('Simpan')),
             ],
           ),
@@ -469,18 +427,14 @@ class _JurusanTab extends StatelessWidget {
   const _JurusanTab();
 
   /// Buka form tambah/ubah jurusan. Mengembalikan id jurusan tersimpan.
-  static Future<int?> openForm(
-    BuildContext context, {
-    MajorWithMeta? existing,
-  }) async {
+  static Future<int?> openForm(BuildContext context, {MajorWithMeta? existing}) async {
     final ClassesProvider provider = context.read<ClassesProvider>();
     final int? savedId = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (BuildContext context) =>
-          _MajorForm(provider: provider, existing: existing),
+      builder: (BuildContext context) => _MajorForm(provider: provider, existing: existing),
     );
     if (savedId != null) provider.load();
     return savedId;
@@ -492,7 +446,7 @@ class _JurusanTab extends StatelessWidget {
       title: 'Hapus Jurusan',
       message: item.classCount > 0
           ? 'Jurusan ${item.major.name} masih dipakai ${item.classCount} kelas.\n'
-              'Jurusan akan diubah menjadi NONAKTIF.'
+                'Jurusan akan diubah menjadi NONAKTIF.'
           : 'Hapus jurusan ${item.major.name}?\nData tidak bisa dikembalikan.',
       confirmLabel: 'Ya',
     );
@@ -546,8 +500,9 @@ class _JurusanTab extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: (m.major.isActive ? AppColors.teal : AppColors.textMuted)
-                      .withValues(alpha: 0.12),
+                  color: (m.major.isActive ? AppColors.teal : AppColors.textMuted).withValues(
+                    alpha: 0.12,
+                  ),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -580,10 +535,7 @@ class _JurusanTab extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      'Kode ${m.major.code} · ${m.classCount} kelas',
-                      style: AppText.caption,
-                    ),
+                    Text('Kode ${m.major.code} · ${m.classCount} kelas', style: AppText.caption),
                   ],
                 ),
               ),
@@ -675,9 +627,8 @@ class _MajorFormState extends State<_MajorForm> {
         userId: userId,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Jurusan "$nama" tersimpan.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Jurusan "$nama" tersimpan.')));
       Navigator.of(context).pop(id);
     } catch (e) {
       if (!mounted) return;
@@ -688,18 +639,12 @@ class _MajorFormState extends State<_MajorForm> {
 
   void _pesan(String text, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: error ? AppColors.danger : null,
-        content: Text(text, maxLines: 3),
-      ),
+      SnackBar(backgroundColor: error ? AppColors.danger : null, content: Text(text, maxLines: 3)),
     );
   }
 
   void _tampilPesanGagal(String judul, Object e) {
-    _pesan(
-      e is AppException ? e.message : pesanErrorUmum(e, judul),
-      error: true,
-    );
+    _pesan(e is AppException ? e.message : pesanErrorUmum(e, judul), error: true);
   }
 
   @override
@@ -728,7 +673,7 @@ class _MajorFormState extends State<_MajorForm> {
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nama Jurusan *',
-                  hintText: 'Contoh: Rekayasa Perangkat Lunak',
+                  hintText: 'Contoh: Teknik Komputer dan Jaringan',
                 ),
                 validator: (String? v) {
                   if (v == null || v.trim().isEmpty) {
@@ -743,7 +688,7 @@ class _MajorFormState extends State<_MajorForm> {
                 textCapitalization: TextCapitalization.characters,
                 decoration: const InputDecoration(
                   labelText: 'Kode Jurusan *',
-                  hintText: 'Contoh: RPL',
+                  hintText: 'Contoh: TKJ',
                 ),
                 validator: (String? v) {
                   if (v == null || v.trim().isEmpty) {
@@ -755,18 +700,12 @@ class _MajorFormState extends State<_MajorForm> {
               const SizedBox(height: 14),
               TextFormField(
                 controller: _desc,
-                decoration: const InputDecoration(
-                  labelText: 'Deskripsi',
-                  hintText: 'Opsional',
-                ),
+                decoration: const InputDecoration(labelText: 'Deskripsi', hintText: 'Opsional'),
                 maxLines: 2,
               ),
               const SizedBox(height: 20),
               _saving
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
+                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
                   : FilledButton(onPressed: _save, child: const Text('Simpan')),
             ],
           ),
@@ -790,10 +729,7 @@ class _MiniTag extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        text,
-        style: AppText.caption.copyWith(color: color, fontSize: 9.5),
-      ),
+      child: Text(text, style: AppText.caption.copyWith(color: color, fontSize: 9.5)),
     );
   }
 }
