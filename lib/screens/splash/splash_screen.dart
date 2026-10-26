@@ -111,10 +111,11 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ],
       ),
-      child: const Icon(
-        Icons.school_rounded,
-        size: 52,
-        color: AppColors.navy,
+      child: Image.asset(
+        'ic_launcher.png',
+        width: 84,
+        height: 84,
+        fit: BoxFit.contain,
       ),
     );
   }

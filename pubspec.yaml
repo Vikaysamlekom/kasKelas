@@ -2,9 +2,8 @@ name: kas_bintang_nusantara
 description: "Aplikasi pengelolaan kas siswa SMK Bintang Nusantara (offline)."
 publish_to: 'none'
 
-# versionName 1.0.5 (dipakai android:versionName)
-# versionCode  +5      (dipakai android:versionCode, naik setiap rilis)
-version: 1.0.5+5
+# Format: versionName+versionCode. Naikkan keduanya setiap rilis Android.
+version: 1.0.6+6
 
 environment:
   sdk: ^3.13.4
@@ -41,6 +40,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
 
@@ -49,5 +49,14 @@ dev_dependencies:
   # pembuatan skema, migrasi, dan alur kas bisa diverifikasi tanpa perangkat.
   sqflite_common_ffi: ^2.3.4
 
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+
 flutter:
   uses-material-design: true
+  assets:
+    - ic_launcher.png

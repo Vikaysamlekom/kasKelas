@@ -43,7 +43,13 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
   void initState() {
     super.initState();
     for (final TextEditingController c in <TextEditingController>[
-      _nama, _npsn, _alamat, _telepon, _email, _kepala, _bendahara,
+      _nama,
+      _npsn,
+      _alamat,
+      _telepon,
+      _email,
+      _kepala,
+      _bendahara,
     ]) {
       c.addListener(_markDirty);
     }
@@ -57,7 +63,13 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
   @override
   void dispose() {
     for (final TextEditingController c in <TextEditingController>[
-      _nama, _npsn, _alamat, _telepon, _email, _kepala, _bendahara,
+      _nama,
+      _npsn,
+      _alamat,
+      _telepon,
+      _email,
+      _kepala,
+      _bendahara,
     ]) {
       c.dispose();
     }
@@ -67,6 +79,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
   Future<void> _load() async {
     final SchoolProfileModel? p = await _repo.getProfile();
     if (!mounted) return;
+    final String namaBendaharaAkun =
+        context.read<SessionProvider>().user?.fullName ?? AppConstants.defaultFullName;
     if (p != null) {
       _nama.text = p.schoolName;
       _npsn.text = p.npsn ?? '';
@@ -74,8 +88,10 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
       _telepon.text = p.phone ?? '';
       _email.text = p.email ?? '';
       _kepala.text = p.headmaster ?? '';
-      _bendahara.text = p.treasurer ?? '';
+      _bendahara.text = p.treasurer?.trim().isNotEmpty == true ? p.treasurer! : namaBendaharaAkun;
       _logoPath = p.logoPath;
+    } else {
+      _bendahara.text = namaBendaharaAkun;
     }
     setState(() {
       _loading = false;
@@ -99,9 +115,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
     } catch (e) {
       // Kamera/galeri tidak tersedia di perangkat ini.
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tidak dapat membuka kamera/galeri: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Tidak dapat membuka kamera/galeri: $e')));
       }
       return;
     }
@@ -124,9 +139,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan logo: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Gagal menyimpan logo: $e')));
       }
     }
   }
@@ -157,23 +171,21 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
 
   Future<void> _save() async {
     if (_nama.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama sekolah wajib diisi.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Nama sekolah wajib diisi.')));
       return;
     }
     final String email = _email.text.trim();
     if (email.isNotEmpty && !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Format email tidak valid.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Format email tidak valid.')));
       return;
     }
 
     setState(() => _saving = true);
     final SessionProvider session = context.read<SessionProvider>();
     final String namaBendahara = _bendahara.text.trim().isEmpty
-        ? (session.user?.fullName ?? '')
+        ? (session.user?.fullName ?? AppConstants.defaultFullName)
         : _bendahara.text.trim();
 
     try {
@@ -199,9 +211,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
       // Tanpa catch, _saving tetap true sehingga tombol Simpan mati permanen.
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(pesanErrorUmum(e, 'Simpan profil sekolah'))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(pesanErrorUmum(e, 'Simpan profil sekolah'))));
       return;
     }
 
@@ -211,10 +222,7 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
       _dirty = false;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profil sekolah disimpan.'),
-        backgroundColor: AppColors.success,
-      ),
+      const SnackBar(content: Text('Profil sekolah disimpan.'), backgroundColor: AppColors.success),
     );
   }
 
@@ -262,6 +270,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
+                  _cardBendahara(),
+                  const SizedBox(height: 12),
                   _cardLogo(),
                   const SizedBox(height: 12),
                   _cardIdentitas(),
@@ -285,6 +295,115 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
     );
   }
 
+  Widget _cardBendahara() {
+    final String username = context.read<SessionProvider>().user?.username ?? 'Akun bendahara';
+
+    return _card(
+      title: 'Profil Bendahara',
+      icon: Icons.account_balance_wallet_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: <Color>[AppColors.navy, AppColors.navySoft],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: <Widget>[
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _bendahara,
+                  builder: (BuildContext context, TextEditingValue value, _) {
+                    return CircleAvatar(
+                      radius: 26,
+                      backgroundColor: Colors.white.withValues(alpha: 0.16),
+                      child: Text(
+                        _inisial(value.text),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _bendahara,
+                    builder: (BuildContext context, TextEditingValue value, _) {
+                      final String nama = value.text.trim();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            nama.isEmpty ? 'Nama bendahara' : nama,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'BENDAHARA',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _field(
+            _bendahara,
+            'Nama Bendahara',
+            Icons.person_outline_rounded,
+            helper: 'Nama ini ditampilkan pada laporan.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _inisial(String nama) {
+    final List<String> bagian = nama.trim().split(RegExp(r'\s+'))
+      ..removeWhere((String kata) => kata.isEmpty);
+    if (bagian.isEmpty) return 'B';
+    if (bagian.length == 1) return bagian.first[0].toUpperCase();
+    return '${bagian.first[0]}${bagian.last[0]}'.toUpperCase();
+  }
+
   Widget _cardLogo() {
     return _card(
       title: 'Logo Sekolah',
@@ -301,13 +420,11 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
             ),
             clipBehavior: Clip.antiAlias,
             child: _logoPath == null
-                ? const Icon(Icons.school_rounded,
-                    size: 48, color: AppColors.textMuted)
+                ? const Icon(Icons.school_rounded, size: 48, color: AppColors.textMuted)
                 : Image.file(
                     File(_logoPath!),
                     fit: BoxFit.contain,
-                    errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
-                        const Icon(
+                    errorBuilder: (BuildContext _, Object _, StackTrace? _) => const Icon(
                       Icons.broken_image_rounded,
                       size: 40,
                       color: AppColors.textMuted,
@@ -339,8 +456,7 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _hapusLogo,
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: AppColors.danger),
+                  icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
                   tooltip: 'Hapus logo',
                 ),
               ],
@@ -371,26 +487,11 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
       icon: Icons.contact_page_outlined,
       child: Column(
         children: <Widget>[
-          _field(
-            _alamat,
-            'Alamat',
-            Icons.location_on_outlined,
-            maxLines: 3,
-          ),
+          _field(_alamat, 'Alamat', Icons.location_on_outlined, maxLines: 3),
           const SizedBox(height: 12),
-          _field(
-            _telepon,
-            'Telepon',
-            Icons.phone_outlined,
-            keyboard: TextInputType.phone,
-          ),
+          _field(_telepon, 'Telepon', Icons.phone_outlined, keyboard: TextInputType.phone),
           const SizedBox(height: 12),
-          _field(
-            _email,
-            'Email',
-            Icons.email_outlined,
-            keyboard: TextInputType.emailAddress,
-          ),
+          _field(_email, 'Email', Icons.email_outlined, keyboard: TextInputType.emailAddress),
         ],
       ),
     );
@@ -398,33 +499,20 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
 
   Widget _cardPimpinan() {
     return _card(
-      title: 'Pimpinan & Bendahara',
+      title: 'Kepala Sekolah',
       icon: Icons.how_to_reg_outlined,
       child: Column(
-        children: <Widget>[
-          _field(_kepala, 'Kepala Sekolah', Icons.person_outline_rounded),
-          const SizedBox(height: 12),
-          _field(
-            _bendahara,
-            'Nama Bendahara',
-            Icons.account_balance_wallet_outlined,
-            helper: 'Dipakai pada kop laporan dan tanda tangan PDF',
-          ),
-        ],
+        children: <Widget>[_field(_kepala, 'Kepala Sekolah', Icons.person_outline_rounded)],
       ),
     );
   }
 
-  Widget _card({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+  Widget _card({required String title, required IconData icon, required Widget child}) {
     return Card(
       elevation: 0,
       color: AppColors.card,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: const BorderSide(color: AppColors.divider),
       ),
       child: Padding(
@@ -436,10 +524,7 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
               children: <Widget>[
                 Icon(icon, size: 18, color: AppColors.navy),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: AppText.sectionTitle.copyWith(fontSize: 14),
-                ),
+                Text(title, style: AppText.sectionTitle.copyWith(fontSize: 14)),
               ],
             ),
             const SizedBox(height: 12),

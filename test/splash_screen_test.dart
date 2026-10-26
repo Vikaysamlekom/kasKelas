@@ -9,16 +9,20 @@ void main() {
     WidgetTester tester,
   ) async {
     bool selesai = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SplashScreen(onFinished: () => selesai = true),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(home: SplashScreen(onFinished: () => selesai = true)));
 
     // Tengah animasi (± 2 detik): logo dan nama aplikasi harus tampil.
     await tester.pump(const Duration(milliseconds: 1500));
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byIcon(Icons.school_rounded), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName == 'ic_launcher.png',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Kas Bintang Nusantara'), findsOneWidget);
 
     // Lewati sisa animasi (durasi total 2,8 detik) sampai fade-out selesai.
@@ -27,15 +31,9 @@ void main() {
     expect(selesai, isTrue, reason: 'onFinished harus dipanggil setelah animasi');
   });
 
-  testWidgets('onFinished tidak dipanggil sebelum animasi selesai', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('onFinished tidak dipanggil sebelum animasi selesai', (WidgetTester tester) async {
     bool selesai = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SplashScreen(onFinished: () => selesai = true),
-      ),
-    );
+    await tester.pumpWidget(MaterialApp(home: SplashScreen(onFinished: () => selesai = true)));
 
     await tester.pump(const Duration(milliseconds: 1000));
     expect(selesai, isFalse);

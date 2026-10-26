@@ -9,6 +9,7 @@ class ClassProgressTile extends StatelessWidget {
   final int totalStudents;
   final int paidStudents;
   final double percent;
+  final VoidCallback? onTap;
 
   const ClassProgressTile({
     super.key,
@@ -16,48 +17,57 @@ class ClassProgressTile extends StatelessWidget {
     required this.totalStudents,
     required this.paidStudents,
     required this.percent,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final double p = (percent / 100).clamp(0, 1).toDouble();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  className,
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    className,
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  '$paidStudents/$totalStudents siswa · ${percent.toStringAsFixed(0)}%',
+                  style: AppText.caption,
+                ),
+                if (onTap != null) ...<Widget>[
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 18),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: p,
+                minHeight: 8,
+                backgroundColor: AppColors.divider,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  percent >= 80
+                      ? AppColors.teal
+                      : percent >= 50
+                      ? AppColors.blue
+                      : AppColors.orange,
                 ),
               ),
-              Text(
-                '$paidStudents/$totalStudents siswa · ${percent.toStringAsFixed(0)}%',
-                style: AppText.caption,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: p,
-              minHeight: 8,
-              backgroundColor: AppColors.divider,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                percent >= 80
-                    ? AppColors.teal
-                    : percent >= 50
-                        ? AppColors.blue
-                        : AppColors.orange,
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
