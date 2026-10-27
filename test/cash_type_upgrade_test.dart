@@ -25,7 +25,7 @@ void main() {
   });
 
   test(
-    'upgrade replaces only unchanged defaults and preserves payment history',
+    'upgrade sets monthly default and preserves customized data and history',
     () async {
       await DBHelper.instance.close();
       DBHelper.dbNameOverride = dbName;
@@ -119,9 +119,14 @@ void main() {
 
       expect(
         activeTypes.map((Map<String, Object?> item) => item['name']),
-        containsAll(<String>['Kas Mingguan', 'Kas Bulanan Khusus']),
+        containsAll(<String>['Kas Bulanan', 'Kas Bulanan Khusus']),
       );
       expect(activeTypes, hasLength(2));
+      final Map<String, Object?> kasBulanan = allTypes.singleWhere(
+        (Map<String, Object?> item) => item['name'] == 'Kas Bulanan',
+      );
+      expect(kasBulanan['amount'], 10000);
+      expect(kasBulanan['frequency'], 'bulanan');
       expect(
         allTypes.singleWhere(
           (Map<String, Object?> item) => item['code'] == 'SOSIAL',
@@ -132,6 +137,78 @@ void main() {
         allTypes.any((Map<String, Object?> item) => item['code'] == 'TAHUNAN'),
         isFalse,
       );
+      expect(await upgraded.query('payments'), hasLength(1));
+    },
+  );
+
+  test(
+    'upgrade from weekly default restores monthly and keeps old payments',
+    () async {
+      await DBHelper.instance.close();
+      DBHelper.dbNameOverride = dbName;
+      final String base = await getDatabasesPath();
+      final File dbFile = File(p.join(base, dbName));
+      if (dbFile.existsSync()) dbFile.deleteSync();
+
+      final Database oldDb = await openDatabase(
+        dbFile.path,
+        version: 6,
+        onCreate: (Database db, int version) async {
+          await db.execute('''
+          CREATE TABLE cash_types (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            code TEXT NOT NULL,
+            amount INTEGER NOT NULL DEFAULT 0,
+            frequency TEXT NOT NULL DEFAULT 'mingguan',
+            due_day INTEGER NOT NULL DEFAULT 10,
+            description TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+          )
+        ''');
+          await db.execute('''
+          CREATE TABLE payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cash_type_id INTEGER NOT NULL
+          )
+        ''');
+
+          final int weeklyId = await db.insert('cash_types', <String, Object?>{
+            'name': 'Kas Mingguan',
+            'code': 'MINGGUAN',
+            'amount': 0,
+            'frequency': 'mingguan',
+            'due_day': 10,
+            'description': 'Iuran kas rutin setiap minggu',
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          await db.insert('payments', <String, Object?>{
+            'cash_type_id': weeklyId,
+          });
+        },
+      );
+      await oldDb.close();
+
+      final Database upgraded = await DBHelper.instance.database;
+      final List<Map<String, Object?>> activeTypes = await upgraded.query(
+        'cash_types',
+        where: 'is_active = 1',
+      );
+      final List<Map<String, Object?>> weeklyTypes = await upgraded.query(
+        'cash_types',
+        where: 'code = ?',
+        whereArgs: <Object?>['MINGGUAN'],
+      );
+      final Map<String, Object?> monthly = activeTypes.single;
+
+      expect(monthly['name'], 'Kas Bulanan');
+      expect(monthly['code'], 'BULANAN');
+      expect(monthly['frequency'], 'bulanan');
+      expect(monthly['amount'], 10000);
+      expect(weeklyTypes, hasLength(1));
+      expect(weeklyTypes.single['is_active'], 0);
       expect(await upgraded.query('payments'), hasLength(1));
     },
   );

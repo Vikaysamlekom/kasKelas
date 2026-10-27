@@ -10,7 +10,7 @@ class AppConstants {
 
   // Nama & versi database
   static const String dbName = 'kas_bintang_nusantara.db';
-  static const int dbVersion = 6;
+  static const int dbVersion = 7;
 
   // Kredensial default bendahara (dibuat otomatis saat DB pertama kali dibuat)
   static const String defaultUsername = 'bendahara';

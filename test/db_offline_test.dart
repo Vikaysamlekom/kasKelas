@@ -32,7 +32,7 @@ void main() {
   late int userId;
   late int kelasId;
   late int siswaId;
-  late int kasMingguanId;
+  late int kasBulananId;
 
   final DateTime now = DateTime.now();
   late String hariIni;
@@ -40,14 +40,14 @@ void main() {
   // PIN uji milik sendiri — aplikasi tidak menyediakan PIN bawaan.
   const String pinUji = '927364';
 
-  /// Jenis kas bawaan bernominal 0 (tunggakan tidak diisi otomatis). Helper ini
-  /// menetapkan nominal untuk test yang memang perlu memeriksa status bayar.
+  /// Helper ini menetapkan nominal untuk test yang memang perlu memeriksa
+  /// status bayar.
   Future<void> setKasBulananAmount(int amount) {
     return DBHelper.instance.update(
       DBHelper.tblCashTypes,
       <String, Object?>{'amount': amount},
       where: 'id = ?',
-      whereArgs: <Object?>[kasMingguanId],
+      whereArgs: <Object?>[kasBulananId],
     );
   }
 
@@ -95,7 +95,7 @@ void main() {
     );
     siswaId = siswaBaru.id!;
 
-    kasMingguanId = (await DBHelper.instance.query(DBHelper.tblCashTypes, where: 'code = ?', whereArgs: <Object?>['MINGGUAN']))
+    kasBulananId = (await DBHelper.instance.query(DBHelper.tblCashTypes, where: 'code = ?', whereArgs: <Object?>['BULANAN']))
         .first['id'] as int;
 
     hariIni = now.toIso8601String().substring(0, 10);
@@ -141,24 +141,24 @@ void main() {
       expect(await DBHelper.instance.count(DBHelper.tblSchoolProfile), 1);
     });
 
-    test('nominal jenis kas bawaan 0 agar tunggakan tidak otomatis', () async {
+    test('jenis kas bulanan bawaan bernominal Rp10.000', () async {
       final List<Map<String, Object?>> rows =
           await DBHelper.instance.query(DBHelper.tblCashTypes);
       expect(rows, hasLength(1));
-      expect(rows.single['name'], 'Kas Mingguan');
-      expect(rows.single['code'], 'MINGGUAN');
-      expect(rows.single['frequency'], 'mingguan');
+      expect(rows.single['name'], 'Kas Bulanan');
+      expect(rows.single['code'], 'BULANAN');
+      expect(rows.single['frequency'], 'bulanan');
       for (final Map<String, Object?> r in rows) {
         expect(
           r['amount'],
-          0,
-          reason: 'Nominal bawaan ${r['name']} harus 0, bukan angka otomatis',
+          10000,
+          reason: 'Nominal bawaan ${r['name']} harus Rp10.000',
         );
       }
       expect(
         await pembayaran.kasPerBulan(),
-        0,
-        reason: 'Kewajiban bulanan harus 0 sebelum bendahara mengisi nominal',
+        10000,
+        reason: 'Kas Bulanan bawaan bernilai Rp10.000 per siswa',
       );
     });
 
@@ -245,7 +245,7 @@ void main() {
     test('siswa dengan riwayat pembayaran tidak bisa dihapus', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -262,7 +262,7 @@ void main() {
 
       final dynamic pertama = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -271,7 +271,7 @@ void main() {
       );
       final dynamic kedua = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 10000,
         month: now.month,
         year: now.year,
@@ -289,7 +289,7 @@ void main() {
       expect(
         () => pembayaran.add(
           studentId: siswaId,
-          cashTypeId: kasMingguanId,
+          cashTypeId: kasBulananId,
           amount: 0,
           month: now.month,
           year: now.year,
@@ -304,7 +304,7 @@ void main() {
 
       final dynamic p = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -320,7 +320,7 @@ void main() {
           siswaId,
           now.month,
           now.year,
-          cashTypeId: kasMingguanId,
+          cashTypeId: kasBulananId,
         )).status,
         PaymentStatus.belum,
       );
@@ -357,7 +357,7 @@ void main() {
       // total bayar dihitung hanya untuk jenis kas terkait.
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -378,7 +378,7 @@ void main() {
         siswaId,
         now.month,
         now.year,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
       );
       expect(bulanan.owed, 25000);
       expect(bulanan.paid, 25000);
@@ -404,7 +404,7 @@ void main() {
       for (int i = 0; i < 2; i++) {
         await pembayaran.add(
           studentId: siswaId,
-          cashTypeId: kasMingguanId,
+          cashTypeId: kasBulananId,
           amount: 25000,
           month: now.month,
           year: now.year,
@@ -414,7 +414,7 @@ void main() {
       }
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -433,7 +433,7 @@ void main() {
 
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 200000,
         month: now.month,
         year: now.year,
@@ -474,7 +474,7 @@ void main() {
 
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 50000,
         month: now.month,
         year: now.year,
@@ -512,7 +512,7 @@ void main() {
               .first['id'] as int;
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 100000,
         month: now.month,
         year: now.year,
@@ -542,7 +542,7 @@ void main() {
 
       final dynamic p1 = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -551,7 +551,7 @@ void main() {
       );
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -587,7 +587,7 @@ void main() {
     test('rekap per tanggal terhitung benar', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -624,7 +624,7 @@ void main() {
     test('progres kelas menghitung siswa yang sudah bayar', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -642,7 +642,7 @@ void main() {
     test('transaksi hari ini terhitung', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -660,7 +660,7 @@ void main() {
       );
       await pembayaran.add(
         studentId: s.id!,
-        cashTypeId: kasMingguanId,
+        cashTypeId: kasBulananId,
         amount: 25000,
         month: now.month,
         year: now.year,

@@ -197,7 +197,7 @@ void main() {
       expect(p.nama, 'Kas Praktikum');
       expect(p.kode, 'PRAKTIK');
       expect(p.nominal, 75000);
-      expect(p.frekuensi, 'mingguan');
+      expect(p.frekuensi, 'bulanan');
     });
 
     smokeTest('form kosong divalidasi, provider tidak dipanggil', (
