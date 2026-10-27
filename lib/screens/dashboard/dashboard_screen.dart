@@ -1,12 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../models/school_profile_model.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../repositories/dashboard_repository.dart';
+import '../../repositories/school_profile_repo.dart';
 import '../pengeluaran/pengeluaran_screen.dart';
 import '../settings/profil_sekolah_screen.dart';
 import '../transactions/riwayat_transaksi_screen.dart';
@@ -25,12 +29,30 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  SchoolProfileModel? _schoolProfile;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<DashboardProvider>().load();
+      if (mounted) {
+        context.read<DashboardProvider>().load();
+        _loadSchoolProfile();
+      }
     });
+  }
+
+  Future<void> _loadSchoolProfile() async {
+    try {
+      final SchoolProfileModel? profile = await SchoolProfileRepository()
+          .getProfile();
+      if (mounted) setState(() => _schoolProfile = profile);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memuat profil sekolah: $e')),
+      );
+    }
   }
 
   Future<void> _refresh() async {
@@ -42,7 +64,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final DashboardProvider dashboard = context.watch<DashboardProvider>();
     final String? bendahara = context.read<SessionProvider>().user?.fullName;
     final DateTime now = DateTime.now();
-    final String periode = '${Formatters.namaBulanPendek(now.month)} ${now.year}';
+    final String periode =
+        '${Formatters.namaBulanPendek(now.month)} ${now.year}';
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -57,19 +80,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.only(right: 16),
                 child: IconButton(
                   tooltip: 'Buka profil sekolah',
-                  onPressed: () => _openScreen(context, const ProfilSekolahScreen()),
-                  icon: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: AppColors.navy,
-                    child: Text(
-                      _initial(bendahara ?? 'B'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
+                  onPressed: () => _openProfile(context),
+                  icon: _buildSchoolLogo(36),
                 ),
               ),
             ],
@@ -78,9 +90,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             sliver: SliverList.list(
               children: <Widget>[
+                AppCard(
+                  padding: const EdgeInsets.all(14),
+                  onTap: () => _openProfile(context),
+                  child: Row(
+                    children: <Widget>[
+                      _buildSchoolLogo(56),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              _schoolProfile?.schoolName.trim().isNotEmpty ==
+                                      true
+                                  ? _schoolProfile!.schoolName
+                                  : AppConstants.appName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sectionTitle,
+                            ),
+                            const SizedBox(height: 4),
+                            Text('Profil Sekolah', style: AppText.caption),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
                 // ---------- RINGKASAN KEUANGAN ----------
                 if (dashboard.isLoading && dashboard.summary == null)
-                  const AppCard(padding: EdgeInsets.symmetric(vertical: 56), child: AppLoading())
+                  const AppCard(
+                    padding: EdgeInsets.symmetric(vertical: 56),
+                    child: AppLoading(),
+                  )
                 else if (dashboard.summary == null)
                   AppCard(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -111,11 +159,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     pengeluaranBulanIni: dashboard.summary!.pengeluaranBulanIni,
                     transaksiHariIni: dashboard.summary!.transaksiHariIni,
                     periodeLabel: periode,
-                    onSaldoTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
-                    onPemasukanTap: () =>
-                        context.read<NavigationProvider>().setIndex(NavigationIndex.payments),
-                    onPengeluaranTap: () => _openScreen(context, const PengeluaranScreen()),
-                    onTransaksiTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
+                    onSaldoTap: () =>
+                        _openScreen(context, const RiwayatTransaksiScreen()),
+                    onPemasukanTap: () => context
+                        .read<NavigationProvider>()
+                        .setIndex(NavigationIndex.payments),
+                    onPengeluaranTap: () =>
+                        _openScreen(context, const PengeluaranScreen()),
+                    onTransaksiTap: () =>
+                        _openScreen(context, const RiwayatTransaksiScreen()),
                   ),
                   const SizedBox(height: 24),
 
@@ -143,9 +195,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               totalStudents: c.totalStudents,
                               paidStudents: c.paidStudents,
                               percent: c.percent,
-                              onTap: () => context.read<NavigationProvider>().setIndex(
-                                NavigationIndex.students,
-                              ),
+                              onTap: () => context
+                                  .read<NavigationProvider>()
+                                  .setIndex(NavigationIndex.students),
                             ),
                         ],
                       ],
@@ -165,14 +217,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return 'Halo, ${nama.trim().split(' ').first}';
   }
 
-  String _initial(String name) {
-    final List<String> parts = name.trim().split(' ');
-    if (parts.isEmpty) return 'B';
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+  Widget _buildSchoolLogo(double size) {
+    final String? path = _schoolProfile?.logoPath;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: path == null || path.isEmpty
+          ? Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy)
+          : Image.file(
+              File(path),
+              fit: BoxFit.contain,
+              errorBuilder: (BuildContext _, Object _, StackTrace? _) => Icon(
+                Icons.school_rounded,
+                size: size * 0.58,
+                color: AppColors.navy,
+              ),
+            ),
+    );
   }
 
-  void _openScreen(BuildContext context, Widget screen) {
-    Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => screen));
+  Future<void> _openProfile(BuildContext context) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const ProfilSekolahScreen()),
+    );
+    if (mounted) await _loadSchoolProfile();
+  }
+
+  Future<void> _openScreen(BuildContext context, Widget screen) async {
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute<void>(builder: (_) => screen));
   }
 }
