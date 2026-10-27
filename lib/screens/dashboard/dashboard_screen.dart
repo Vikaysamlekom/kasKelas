@@ -44,14 +44,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadSchoolProfile() async {
     try {
-      final SchoolProfileModel? profile = await SchoolProfileRepository()
-          .getProfile();
+      final SchoolProfileModel? profile = await SchoolProfileRepository().getProfile();
       if (mounted) setState(() => _schoolProfile = profile);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat profil sekolah: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal memuat profil sekolah: $e')));
     }
   }
 
@@ -64,8 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final DashboardProvider dashboard = context.watch<DashboardProvider>();
     final String? bendahara = context.read<SessionProvider>().user?.fullName;
     final DateTime now = DateTime.now();
-    final String periode =
-        '${Formatters.namaBulanPendek(now.month)} ${now.year}';
+    final String periode = '${Formatters.namaBulanPendek(now.month)} ${now.year}';
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -102,8 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                              _schoolProfile?.schoolName.trim().isNotEmpty ==
-                                      true
+                              _schoolProfile?.schoolName.trim().isNotEmpty == true
                                   ? _schoolProfile!.schoolName
                                   : AppConstants.appName,
                               maxLines: 2,
@@ -115,20 +111,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.textMuted,
-                      ),
+                      const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
                 // ---------- RINGKASAN KEUANGAN ----------
                 if (dashboard.isLoading && dashboard.summary == null)
-                  const AppCard(
-                    padding: EdgeInsets.symmetric(vertical: 56),
-                    child: AppLoading(),
-                  )
+                  const AppCard(padding: EdgeInsets.symmetric(vertical: 56), child: AppLoading())
                 else if (dashboard.summary == null)
                   AppCard(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -159,15 +149,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     pengeluaranBulanIni: dashboard.summary!.pengeluaranBulanIni,
                     transaksiHariIni: dashboard.summary!.transaksiHariIni,
                     periodeLabel: periode,
-                    onSaldoTap: () =>
-                        _openScreen(context, const RiwayatTransaksiScreen()),
-                    onPemasukanTap: () => context
-                        .read<NavigationProvider>()
-                        .setIndex(NavigationIndex.payments),
-                    onPengeluaranTap: () =>
-                        _openScreen(context, const PengeluaranScreen()),
-                    onTransaksiTap: () =>
-                        _openScreen(context, const RiwayatTransaksiScreen()),
+                    onSaldoTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
+                    onPemasukanTap: () =>
+                        context.read<NavigationProvider>().setIndex(NavigationIndex.payments),
+                    onPengeluaranTap: () => _openScreen(context, const PengeluaranScreen()),
+                    onTransaksiTap: () => _openScreen(context, const RiwayatTransaksiScreen()),
                   ),
                   const SizedBox(height: 24),
 
@@ -195,9 +181,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               totalStudents: c.totalStudents,
                               paidStudents: c.paidStudents,
                               percent: c.percent,
-                              onTap: () => context
-                                  .read<NavigationProvider>()
-                                  .setIndex(NavigationIndex.students),
+                              onTap: () => context.read<NavigationProvider>().setIndex(
+                                NavigationIndex.students,
+                              ),
                             ),
                         ],
                       ],
@@ -233,24 +219,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : Image.file(
               File(path),
               fit: BoxFit.contain,
-              errorBuilder: (BuildContext _, Object _, StackTrace? _) => Icon(
-                Icons.school_rounded,
-                size: size * 0.58,
-                color: AppColors.navy,
-              ),
+              errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+                  Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy),
             ),
     );
   }
 
   Future<void> _openProfile(BuildContext context) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const ProfilSekolahScreen()),
-    );
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute<void>(builder: (_) => const ProfilSekolahScreen()));
     if (mounted) await _loadSchoolProfile();
   }
 
   Future<void> _openScreen(BuildContext context, Widget screen) async {
-    await Navigator.of(context)
-        .push<void>(MaterialPageRoute<void>(builder: (_) => screen));
+    await Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => screen));
   }
 }
