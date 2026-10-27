@@ -128,8 +128,95 @@ class DBHelper {
             );
           }
         }
+        // Migrasi: versi 5 → 6 menjadikan Kas Mingguan satu-satunya jenis
+        // kas bawaan. Jenis lama yang belum pernah diubah dihapus bila belum
+        // dipakai, atau dinonaktifkan bila memiliki riwayat pembayaran.
+        if (oldVersion < 6) {
+          await _migrateWeeklyCashTypeDefaults(db);
+        }
       },
     );
+  }
+
+  Future<void> _migrateWeeklyCashTypeDefaults(Database db) async {
+    const List<(String, String, String, int, String)> defaultLama =
+        <(String, String, String, int, String)>[
+          (
+            'BULANAN',
+            'Kas Bulanan',
+            'bulanan',
+            10,
+            'Iuran kas rutin setiap bulan',
+          ),
+          (
+            'TAHUNAN',
+            'Kas Tahunan',
+            'tahunan',
+            31,
+            'Iuran kas sekali dalam setahun',
+          ),
+          ('SOSIAL', 'Kas Sosial', 'bulanan', 15, 'Iuran kas sosial / bantuan'),
+        ];
+
+    for (final (
+          String code,
+          String name,
+          String frequency,
+          int dueDay,
+          String description,
+        )
+        in defaultLama) {
+      final List<Map<String, Object?>> rows = await db.query(
+        tblCashTypes,
+        where:
+            'code = ? AND name = ? AND amount = 0 AND frequency = ? '
+            'AND due_day = ? AND description = ? AND is_active = 1',
+        whereArgs: <Object?>[code, name, frequency, dueDay, description],
+      );
+      for (final Map<String, Object?> row in rows) {
+        final List<Map<String, Object?>> payments = await db.query(
+          tblPayments,
+          columns: <String>['id'],
+          where: 'cash_type_id = ?',
+          whereArgs: <Object?>[row['id']],
+          limit: 1,
+        );
+        if (payments.isEmpty) {
+          await db.delete(
+            tblCashTypes,
+            where: 'id = ?',
+            whereArgs: <Object?>[row['id']],
+          );
+        } else {
+          await db.update(
+            tblCashTypes,
+            <String, Object?>{'is_active': 0},
+            where: 'id = ?',
+            whereArgs: <Object?>[row['id']],
+          );
+        }
+      }
+    }
+
+    final List<Map<String, Object?>> weekly = await db.query(
+      tblCashTypes,
+      columns: <String>['id'],
+      where: 'code = ?',
+      whereArgs: <Object?>['MINGGUAN'],
+      limit: 1,
+    );
+    if (weekly.isEmpty) {
+      await db.insert(tblCashTypes, <String, Object?>{
+        'name': 'Kas Mingguan',
+        'code': 'MINGGUAN',
+        'amount': 0,
+        'frequency': 'mingguan',
+        'due_day': 10,
+        'description': 'Iuran kas rutin setiap minggu',
+        'is_active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
   // ------------------------------------------------------------------
@@ -211,7 +298,7 @@ class DBHelper {
         name TEXT NOT NULL UNIQUE,
         code TEXT NOT NULL,
         amount INTEGER NOT NULL DEFAULT 0,
-        frequency TEXT NOT NULL DEFAULT 'bulanan',
+        frequency TEXT NOT NULL DEFAULT 'mingguan',
         due_day INTEGER NOT NULL DEFAULT 10,
         description TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -455,38 +542,21 @@ class DBHelper {
       });
     }
 
-    // Jenis kas default.
+    // Jenis kas mingguan sebagai satu-satunya bawaan.
     //
     // Nominal sengaja DIBIARKAN 0 (bukan 25.000/10.000 dst.) supaya aplikasi
     // tidak menetapkan tunggakan secara otomatis. Bendahara mengisi nominal
     // kas sesuai keadaan sekolah di menu "Jenis Kas".
-    final List<Map<String, Object?>> cashTypes =
-        <Map<String, Object?>>[
-          <String, Object?>{
-            'name': 'Kas Bulanan',
-            'code': 'BULANAN',
-            'amount': 0,
-            'frequency': 'bulanan',
-            'due_day': 10,
-            'description': 'Iuran kas rutin setiap bulan',
-          },
-          <String, Object?>{
-            'name': 'Kas Tahunan',
-            'code': 'TAHUNAN',
-            'amount': 0,
-            'frequency': 'tahunan',
-            'due_day': 31,
-            'description': 'Iuran kas sekali dalam setahun',
-          },
-          <String, Object?>{
-            'name': 'Kas Sosial',
-            'code': 'SOSIAL',
-            'amount': 0,
-            'frequency': 'bulanan',
-            'due_day': 15,
-            'description': 'Iuran kas sosial / bantuan',
-          },
-        ];
+    final List<Map<String, Object?>> cashTypes = <Map<String, Object?>>[
+      <String, Object?>{
+        'name': 'Kas Mingguan',
+        'code': 'MINGGUAN',
+        'amount': 0,
+        'frequency': 'mingguan',
+        'due_day': 10,
+        'description': 'Iuran kas rutin setiap minggu',
+      },
+    ];
     for (final Map<String, Object?> row in cashTypes) {
       await db.insert(tblCashTypes, <String, Object?>{
         ...row,

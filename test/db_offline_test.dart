@@ -32,7 +32,7 @@ void main() {
   late int userId;
   late int kelasId;
   late int siswaId;
-  late int kasBulananId;
+  late int kasMingguanId;
 
   final DateTime now = DateTime.now();
   late String hariIni;
@@ -47,7 +47,7 @@ void main() {
       DBHelper.tblCashTypes,
       <String, Object?>{'amount': amount},
       where: 'id = ?',
-      whereArgs: <Object?>[kasBulananId],
+      whereArgs: <Object?>[kasMingguanId],
     );
   }
 
@@ -95,7 +95,7 @@ void main() {
     );
     siswaId = siswaBaru.id!;
 
-    kasBulananId = (await DBHelper.instance.query(DBHelper.tblCashTypes, where: 'code = ?', whereArgs: <Object?>['BULANAN']))
+    kasMingguanId = (await DBHelper.instance.query(DBHelper.tblCashTypes, where: 'code = ?', whereArgs: <Object?>['MINGGUAN']))
         .first['id'] as int;
 
     hariIni = now.toIso8601String().substring(0, 10);
@@ -136,7 +136,7 @@ void main() {
       }
 
       expect(await DBHelper.instance.count(DBHelper.tblUsers), 1);
-      expect(await DBHelper.instance.count(DBHelper.tblCashTypes), 3);
+      expect(await DBHelper.instance.count(DBHelper.tblCashTypes), 1);
       expect(await DBHelper.instance.count(DBHelper.tblExpenseCategories), 6);
       expect(await DBHelper.instance.count(DBHelper.tblSchoolProfile), 1);
     });
@@ -144,7 +144,10 @@ void main() {
     test('nominal jenis kas bawaan 0 agar tunggakan tidak otomatis', () async {
       final List<Map<String, Object?>> rows =
           await DBHelper.instance.query(DBHelper.tblCashTypes);
-      expect(rows, hasLength(3));
+      expect(rows, hasLength(1));
+      expect(rows.single['name'], 'Kas Mingguan');
+      expect(rows.single['code'], 'MINGGUAN');
+      expect(rows.single['frequency'], 'mingguan');
       for (final Map<String, Object?> r in rows) {
         expect(
           r['amount'],
@@ -242,7 +245,7 @@ void main() {
     test('siswa dengan riwayat pembayaran tidak bisa dihapus', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -259,7 +262,7 @@ void main() {
 
       final dynamic pertama = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -268,7 +271,7 @@ void main() {
       );
       final dynamic kedua = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 10000,
         month: now.month,
         year: now.year,
@@ -286,7 +289,7 @@ void main() {
       expect(
         () => pembayaran.add(
           studentId: siswaId,
-          cashTypeId: kasBulananId,
+          cashTypeId: kasMingguanId,
           amount: 0,
           month: now.month,
           year: now.year,
@@ -301,7 +304,7 @@ void main() {
 
       final dynamic p = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -317,7 +320,7 @@ void main() {
           siswaId,
           now.month,
           now.year,
-          cashTypeId: kasBulananId,
+          cashTypeId: kasMingguanId,
         )).status,
         PaymentStatus.belum,
       );
@@ -325,17 +328,17 @@ void main() {
 
     test('kewajiban mengikuti jenis kas terpilih (bukan total sum)', () async {
       await setKasBulananAmount(25000);
-      final int kasSosialId =
-          (await DBHelper.instance.query(
-            DBHelper.tblCashTypes,
-            where: 'code = ?',
-            whereArgs: <Object?>['SOSIAL'],
-          )).first['id'] as int;
-      await DBHelper.instance.update(
+      final int kasSosialId = await DBHelper.instance.insert(
         DBHelper.tblCashTypes,
-        <String, Object?>{'amount': 10000},
-        where: 'id = ?',
-        whereArgs: <Object?>[kasSosialId],
+        <String, Object?>{
+          'name': 'Kas Sosial',
+          'code': 'SOSIAL',
+          'amount': 10000,
+          'frequency': 'sekali',
+          'due_day': 10,
+          'is_active': 1,
+          'created_at': now.toIso8601String(),
+        },
       );
 
       // Belum bayar: sisa tunggakan = nominal jenis kas terpilih saja.
@@ -354,7 +357,7 @@ void main() {
       // total bayar dihitung hanya untuk jenis kas terkait.
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -375,7 +378,7 @@ void main() {
         siswaId,
         now.month,
         now.year,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
       );
       expect(bulanan.owed, 25000);
       expect(bulanan.paid, 25000);
@@ -401,7 +404,7 @@ void main() {
       for (int i = 0; i < 2; i++) {
         await pembayaran.add(
           studentId: siswaId,
-          cashTypeId: kasBulananId,
+          cashTypeId: kasMingguanId,
           amount: 25000,
           month: now.month,
           year: now.year,
@@ -411,7 +414,7 @@ void main() {
       }
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -430,7 +433,7 @@ void main() {
 
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 200000,
         month: now.month,
         year: now.year,
@@ -471,7 +474,7 @@ void main() {
 
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 50000,
         month: now.month,
         year: now.year,
@@ -509,7 +512,7 @@ void main() {
               .first['id'] as int;
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 100000,
         month: now.month,
         year: now.year,
@@ -539,7 +542,7 @@ void main() {
 
       final dynamic p1 = await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -548,7 +551,7 @@ void main() {
       );
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -584,7 +587,7 @@ void main() {
     test('rekap per tanggal terhitung benar', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -621,7 +624,7 @@ void main() {
     test('progres kelas menghitung siswa yang sudah bayar', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -639,7 +642,7 @@ void main() {
     test('transaksi hari ini terhitung', () async {
       await pembayaran.add(
         studentId: siswaId,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,
@@ -657,7 +660,7 @@ void main() {
       );
       await pembayaran.add(
         studentId: s.id!,
-        cashTypeId: kasBulananId,
+        cashTypeId: kasMingguanId,
         amount: 25000,
         month: now.month,
         year: now.year,

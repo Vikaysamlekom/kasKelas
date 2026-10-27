@@ -4,7 +4,7 @@ class CashTypeModel {
   final String name;
   final String code;
   final int amount;
-  final String frequency; // bulanan / semester / tahunan / sekali
+  final String frequency; // harian / mingguan / bulanan / semester / tahunan / sekali
   final int dueDay;
   final String? description;
   final bool isActive;
@@ -15,7 +15,7 @@ class CashTypeModel {
     required this.name,
     required this.code,
     this.amount = 0,
-    this.frequency = 'bulanan',
+    this.frequency = PaymentFrequency.mingguan,
     this.dueDay = 10,
     this.description,
     this.isActive = true,
@@ -28,7 +28,7 @@ class CashTypeModel {
       name: map['name'] as String,
       code: map['code'] as String,
       amount: map['amount'] as int? ?? 0,
-      frequency: (map['frequency'] as String?) ?? 'bulanan',
+      frequency: (map['frequency'] as String?) ?? PaymentFrequency.mingguan,
       dueDay: map['due_day'] as int? ?? 10,
       description: map['description'] as String?,
       isActive: (map['is_active'] as int? ?? 1) == 1,

@@ -241,7 +241,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
       text: c == null ? '' : Formatters.angka(c.amount),
     );
     _desc = TextEditingController(text: c?.description ?? '');
-    _frequency = c?.frequency ?? PaymentFrequency.bulanan;
+    _frequency = c?.frequency ?? PaymentFrequency.mingguan;
     _dueDay = c?.dueDay ?? 10;
   }
 
@@ -323,7 +323,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                 textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Nama *',
-                  hintText: 'Contoh: Kas Bulanan',
+                  hintText: 'Contoh: Kas Mingguan',
                 ),
                 validator: (String? v) {
                   if (v == null || v.trim().isEmpty) {
@@ -405,7 +405,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                   ),
                 ],
                 onChanged: (String? v) =>
-                    setState(() => _frequency = v ?? PaymentFrequency.bulanan),
+                    setState(() => _frequency = v ?? PaymentFrequency.mingguan),
               ),
               const SizedBox(height: 14),
               TextFormField(
