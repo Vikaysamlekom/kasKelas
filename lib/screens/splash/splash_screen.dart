@@ -7,7 +7,7 @@ import '../../core/constants.dart';
 /// Total durasi: ± 1,2 detik.
 ///
 /// Urutan animasi:
-/// 1. Background navy muncul (0–240 ms).
+/// 1. Background navy langsung tampil (statis).
 /// 2. Logo fade-in + scale-up (60–420 ms).
 /// 3. Nama aplikasi fade-in + slide-up (300–660 ms).
 /// 4. Tampilan bertahan sebentar (660–900 ms).
@@ -15,7 +15,6 @@ import '../../core/constants.dart';
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.onFinished});
 
-  /// Dipanggil setelah animasi selesai.
   final VoidCallback onFinished;
 
   @override
@@ -23,11 +22,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  // Durasi splash dipercepat dari 2800 ms menjadi 1200 ms.
+  // Total durasi animasi.
   static const Duration _durasi = Duration(milliseconds: 1200);
-
-  // Warna background awal.
-  static const Color _navyGelap = Color(0xFF06122E);
 
   // Controller animasi utama.
   late final AnimationController _controller = AnimationController(vsync: this, duration: _durasi)
@@ -39,17 +35,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     ..forward();
 
   // ============================================================
-  // 1. BACKGROUND ANIMATION
-  // 0% – 20% (0–240 ms)
-  // ============================================================
-
-  late final Animation<double> _bg = CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(0.0, 0.20, curve: Curves.easeOut),
-  );
-
-  // ============================================================
-  // 2. LOGO ANIMATION
+  // 1. LOGO ANIMATION
   // 5% – 35% (60–420 ms)
   // ============================================================
 
@@ -66,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   );
 
   // ============================================================
-  // 3. TEXT ANIMATION
+  // 2. TEXT ANIMATION
   // 25% – 55% (300–660 ms)
   // ============================================================
 
@@ -84,15 +70,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       );
 
   // ============================================================
-  // 4. HOLD ANIMATION
-  // 55% – 75% (660–900 ms)
-  // ============================================================
-
-  // Tidak membutuhkan animasi tambahan.
-  // Logo dan teks tetap terlihat.
-
-  // ============================================================
-  // 5. FADE OUT ANIMATION
+  // 3. FADE OUT ANIMATION
   // 75% – 100% (900–1200 ms)
   // ============================================================
 
@@ -102,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   );
 
   // ============================================================
-  // 6. WHITE TRANSITION
+  // 4. WHITE TRANSITION
   // 78% – 100% (936–1200 ms)
   // ============================================================
 
@@ -156,23 +134,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _navyGelap,
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (BuildContext context, Widget? child) {
-          return Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              // =================================================
-              // BACKGROUND
-              // =================================================
+      backgroundColor: AppColors.navy,
+      body: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          // =====================================================
+          // BACKGROUND STATIS (TANPA ANIMASI)
+          // =====================================================
 
-              Container(color: Color.lerp(_navyGelap, AppColors.navy, _bg.value)),
+          const ColoredBox(color: AppColors.navy),
 
-              // =================================================
-              // LOGO + APP NAME
-              // =================================================
-              Opacity(
+          // =====================================================
+          // LOGO + APP NAME
+          // =====================================================
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (BuildContext context, Widget? child) {
+              return Opacity(
                 opacity: 1 - _isiKeluar.value,
                 child: Center(
                   child: Column(
@@ -209,15 +187,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ],
                   ),
                 ),
-              ),
+              );
+            },
+          ),
 
-              // =================================================
-              // WHITE FADE TRANSITION
-              // =================================================
-              ColoredBox(color: Colors.white.withValues(alpha: _voalPutih.value)),
-            ],
-          );
-        },
+          // =====================================================
+          // WHITE FADE TRANSITION
+          // =====================================================
+          AnimatedBuilder(
+            animation: _voalPutih,
+            builder: (context, child) {
+              return IgnorePointer(
+                child: ColoredBox(color: Colors.white.withValues(alpha: _voalPutih.value)),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
