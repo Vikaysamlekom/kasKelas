@@ -18,7 +18,7 @@ import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-/// Uji widget form siswa dengan fokus pada dropdown Kelas.
+/// Uji widget form siswa dengan fokus pada kelas yang bersifat opsional.
 ///
 /// Menguji regresi yang dilaporkan pengguna: dropdown kelas tampak kosong /
 /// tidak bisa dipilih pada mode tambah maupun ubah.
@@ -116,7 +116,7 @@ void main() {
       await tester.pumpWidget(wrapForm(const StudentFormScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.text('Kelas *'), findsOneWidget);
+      expect(find.text('Kelas (opsional)'), findsOneWidget);
       // Fixture benar: satu kelas aktif, satu nonaktif.
       expect(classesProvider.classes.length, 2);
       expect(
@@ -143,7 +143,7 @@ void main() {
       await tester.tap(find.text('XII RPL 1').last);
       await tester.pumpAndSettle();
 
-      // Nilai terpilih tampil di field dan validasi kelas tidak lagi error.
+      // Nilai terpilih tampil di field.
       expect(find.text('XII RPL 1'), findsOneWidget);
       expect(find.text('Kelas wajib dipilih'), findsNothing);
     });
@@ -207,15 +207,37 @@ void main() {
       await classesProvider.load();
     });
 
-    testWidgets('empty state muncul dengan tombol buat kelas', (
+    testWidgets('empty state menjelaskan bahwa kelas opsional', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(wrapForm(const StudentFormScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Belum ada kelas'), findsOneWidget);
+      expect(
+        find.text(
+          'Kelas bersifat opsional. Siswa tetap bisa disimpan tanpa kelas.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Buat Kelas Sekarang'), findsOneWidget);
       expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+    });
+
+    test('siswa dapat disimpan tanpa class_id', () async {
+      final DateTime now = DateTime.now();
+      final StudentModel siswa = await studentRepo.insert(
+        StudentModel(
+          nis: '2001',
+          name: 'Siswa Tanpa Kelas',
+          classId: null,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      expect(siswa.nis, '2001');
+      expect(siswa.classId, isNull);
     });
 
     testWidgets('tombol buat kelas membuka layar Kelas & Jurusan', (
@@ -367,4 +389,3 @@ void _testPenyimpanan(
     });
   });
 }
-

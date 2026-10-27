@@ -83,12 +83,6 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_classId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kelas wajib dipilih.')),
-      );
-      return;
-    }
 
     setState(() => _isSaving = true);
 
@@ -103,22 +97,14 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
     final Map<String, Object?> data = <String, Object?>{
       'nis': _nisController.text.trim(),
-      'nisn': _nisnController.text.trim().isEmpty
-          ? null
-          : _nisnController.text.trim(),
+      'nisn': _nisnController.text.trim().isEmpty ? null : _nisnController.text.trim(),
       'name': _nameController.text.trim(),
       'gender': _gender,
       'class_id': _classId,
       'major_id': majorId,
-      'parent_name': _parentController.text.trim().isEmpty
-          ? null
-          : _parentController.text.trim(),
-      'phone': _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
-      'address': _addressController.text.trim().isEmpty
-          ? null
-          : _addressController.text.trim(),
+      'parent_name': _parentController.text.trim().isEmpty ? null : _parentController.text.trim(),
+      'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      'address': _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       'status': _status,
     };
 
@@ -137,16 +123,12 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     } on DuplicateNisException catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
       }
     }
   }
@@ -156,9 +138,8 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   Future<void> _kelolaKelas() async {
     final ClassesProvider provider = context.read<ClassesProvider>();
     final int sebelum = provider.classes.length;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const KelasScreen()),
-    );
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute<void>(builder: (_) => const KelasScreen()));
     if (!mounted) return;
     await _muatKelas();
     if (!mounted) return;
@@ -201,31 +182,23 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
   Widget _buildClassField(ClassesProvider provider) {
     final List<DropdownMenuItem<int>> items = _classItems(provider);
 
-    // Belum ada kelas sama sekali → tampilkan empty state + aksi membuat kelas.
+    // Kelas opsional, jadi form tetap bisa disimpan meski belum ada kelas.
     if (items.isEmpty) {
       return Container(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
         decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.06),
+          color: AppColors.navy.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+          border: Border.all(color: AppColors.navy.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: <Widget>[
-            const Icon(
-              Icons.meeting_room_outlined,
-              color: AppColors.danger,
-              size: 30,
-            ),
+            const Icon(Icons.meeting_room_outlined, color: AppColors.navy, size: 30),
             const SizedBox(height: 8),
-            Text(
-              'Belum ada kelas',
-              style: AppText.body.copyWith(fontWeight: FontWeight.w700),
-            ),
+            Text('Belum ada kelas', style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              'Setiap siswa wajib punya kelas. Buat kelas terlebih dahulu '
-              'lalu pilih di sini.',
+              'Kelas bersifat opsional. Siswa tetap bisa disimpan tanpa kelas.',
               textAlign: TextAlign.center,
               style: AppText.caption,
             ),
@@ -233,9 +206,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
             FilledButton.tonalIcon(
               onPressed: provider.isLoading ? null : _kelolaKelas,
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(
-                provider.isLoading ? 'Memuat data...' : 'Buat Kelas Sekarang',
-              ),
+              label: Text(provider.isLoading ? 'Memuat data...' : 'Buat Kelas Sekarang'),
             ),
           ],
         ),
@@ -244,8 +215,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
     // Key memuat nilai terpilih + susunan item, sehingga field selalu
     // sinkron saat daftar kelas termuat belakangan atau berubah.
-    final String sidikJari =
-        items.map((DropdownMenuItem<int> i) => i.value).join('-');
+    final String sidikJari = items.map((DropdownMenuItem<int> i) => i.value).join('-');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,11 +225,10 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
           initialValue: _classId,
           isExpanded: true,
           decoration: const InputDecoration(
-            labelText: 'Kelas *',
+            labelText: 'Kelas',
             prefixIcon: Icon(Icons.meeting_room_outlined),
           ),
           items: items,
-          validator: (int? v) => v == null ? 'Kelas wajib dipilih' : null,
           onChanged: (int? v) => setState(() => _classId = v),
         ),
         if (provider.classes.where((ClassWithMeta c) => c.kelas.isActive).isEmpty)
@@ -279,9 +248,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
     final ClassesProvider classes = context.watch<ClassesProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEdit ? 'Ubah Siswa' : 'Tambah Siswa'),
-      ),
+      appBar: AppBar(title: Text(widget.isEdit ? 'Ubah Siswa' : 'Tambah Siswa')),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -296,9 +263,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                     child: TextFormField(
                       controller: _nisController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         labelText: 'NIS *',
                         hintText: 'Nomor induk siswa',
@@ -318,9 +283,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                     child: TextFormField(
                       controller: _nisnController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         labelText: 'NISN',
                         hintText: 'Opsional',
@@ -408,18 +371,9 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),
                 items: const <DropdownMenuItem<String>>[
-                  DropdownMenuItem<String>(
-                    value: 'aktif',
-                    child: Text('Aktif'),
-                  ),
-                  DropdownMenuItem<String>(
-                    value: 'cuti',
-                    child: Text('Cuti'),
-                  ),
-                  DropdownMenuItem<String>(
-                    value: 'lulus',
-                    child: Text('Lulus'),
-                  ),
+                  DropdownMenuItem<String>(value: 'aktif', child: Text('Aktif')),
+                  DropdownMenuItem<String>(value: 'cuti', child: Text('Cuti')),
+                  DropdownMenuItem<String>(value: 'lulus', child: Text('Lulus')),
                 ],
                 onChanged: (String? v) {
                   if (v != null) setState(() => _status = v);
@@ -429,10 +383,7 @@ class _StudentFormScreenState extends State<StudentFormScreen> {
 
               // SUBMIT
               _isSaving
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
+                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
                   : FilledButton(
                       onPressed: _submit,
                       child: Text(widget.isEdit ? 'Simpan Perubahan' : 'Simpan'),
