@@ -458,7 +458,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
   Widget _buildExportBar() {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
         child: Row(
           children: <Widget>[
             Expanded(
