@@ -37,6 +37,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   late DateTime _paidDate;
 
   PeriodStatus? _statusInfo;
+  bool _isLoadingStatus = false;
+  String? _statusError;
+  int _statusRequestId = 0;
   bool _isSaving = false;
 
   @override
@@ -66,19 +69,50 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   }
 
   Future<void> _refreshStatus() async {
+    final int requestId = ++_statusRequestId;
     if (_studentId == null || _cashTypeId == null) {
-      if (mounted) setState(() => _statusInfo = null);
+      if (mounted) {
+        setState(() {
+          _statusInfo = null;
+          _isLoadingStatus = false;
+          _statusError = null;
+        });
+      }
       return;
     }
+    final int studentId = _studentId!;
+    final int cashTypeId = _cashTypeId!;
+    final int month = _month;
+    final int year = _year;
+    setState(() {
+      _statusInfo = null;
+      _isLoadingStatus = true;
+      _statusError = null;
+    });
     final PaymentProvider provider = context.read<PaymentProvider>();
-    final PeriodStatus info = await provider.monthlyStatus(
-      _studentId!,
-      _month,
-      _year,
-      cashTypeId: _cashTypeId!,
-    );
-    if (mounted && _studentId != null) {
-      setState(() => _statusInfo = info);
+    try {
+      final PeriodStatus info = await provider.monthlyStatus(
+        studentId,
+        month,
+        year,
+        cashTypeId: cashTypeId,
+      );
+      if (mounted && requestId == _statusRequestId) {
+        setState(() {
+          _statusInfo = info;
+          _isLoadingStatus = false;
+          _statusError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted && requestId == _statusRequestId) {
+        setState(() {
+          _statusInfo = null;
+          _isLoadingStatus = false;
+          _statusError = 'Gagal memuat status pembayaran.';
+        });
+        _snack('Gagal memuat status pembayaran: $e');
+      }
     }
   }
 
@@ -174,7 +208,21 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         children: <Widget>[
           Text('Status Siswa Periode Ini', style: AppText.caption),
           const SizedBox(height: 8),
-          if (status == null || kas == null)
+          if (_isLoadingStatus)
+            const Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('Memuat status pembayaran...'),
+              ],
+            )
+          else if (_statusError != null)
+            Text(_statusError!, style: AppText.bodySmall.copyWith(color: AppColors.danger))
+          else if (status == null || kas == null)
             Text(
               'Pilih siswa, jenis kas, & periode untuk melihat status '
               'otomatis.',
