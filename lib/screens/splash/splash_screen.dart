@@ -2,94 +2,128 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants.dart';
 
-/// Splash screen animasi aplikasi.
+/// Splash screen Kas Bintang Nusantara.
 ///
-/// Urutan animasi (± 2,8 detik):
-/// 1. Background navy muncul mulus (dari navy gelap ke navy utama).
-/// 2. Logo muncul dengan efek fade-in + scale-up.
-/// 3. Nama aplikasi "Kas Bintang Nusantara" fade-in + slide-up.
-/// 4. Tahan sejenak di tengah layar.
-/// 5. Seluruh tampilan fade-out (putih) → lanjut ke halaman utama.
+/// Total durasi: ± 1,2 detik.
+///
+/// Urutan animasi:
+/// 1. Background navy muncul (0–240 ms).
+/// 2. Logo fade-in + scale-up (60–420 ms).
+/// 3. Nama aplikasi fade-in + slide-up (300–660 ms).
+/// 4. Tampilan bertahan sebentar (660–900 ms).
+/// 5. Fade-out + transisi putih (900–1200 ms).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key, required this.onFinished});
 
-  /// Dipanggil tepat setelah seluruh animasi selesai.
+  /// Dipanggil setelah animasi selesai.
   final VoidCallback onFinished;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  static const Duration _durasi = Duration(milliseconds: 2800);
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  // Durasi splash dipercepat dari 2800 ms menjadi 1200 ms.
+  static const Duration _durasi = Duration(milliseconds: 1200);
 
-  /// Warna dasar sebelum background utama muncul.
+  // Warna background awal.
   static const Color _navyGelap = Color(0xFF06122E);
 
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: _durasi)
-        ..addStatusListener((AnimationStatus status) {
-          if (status == AnimationStatus.completed && mounted) {
-            widget.onFinished();
-          }
-        })
-        ..forward();
+  // Controller animasi utama.
+  late final AnimationController _controller = AnimationController(vsync: this, duration: _durasi)
+    ..addStatusListener((AnimationStatus status) {
+      if (status == AnimationStatus.completed && mounted) {
+        widget.onFinished();
+      }
+    })
+    ..forward();
 
-  // 1. Background: 0% – 30%
+  // ============================================================
+  // 1. BACKGROUND ANIMATION
+  // 0% – 20% (0–240 ms)
+  // ============================================================
+
   late final Animation<double> _bg = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.0, 0.30, curve: Curves.easeOut),
+    curve: const Interval(0.0, 0.20, curve: Curves.easeOut),
   );
 
-  // 2. Logo: 15% – 48% (fade-in + scale-up)
+  // ============================================================
+  // 2. LOGO ANIMATION
+  // 5% – 35% (60–420 ms)
+  // ============================================================
+
   late final Animation<double> _logoOpacity = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.15, 0.48, curve: Curves.easeOutCubic),
+    curve: const Interval(0.05, 0.35, curve: Curves.easeOutCubic),
   );
-  late final Animation<double> _logoScale = Tween<double>(
-    begin: 0.82,
-    end: 1.0,
-  ).animate(
+
+  late final Animation<double> _logoScale = Tween<double>(begin: 0.82, end: 1.0).animate(
     CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.15, 0.48, curve: Curves.easeOutCubic),
+      curve: const Interval(0.05, 0.35, curve: Curves.easeOutCubic),
     ),
   );
 
-  // 3. Teks nama aplikasi: 45% – 70% (fade-in + slide-up)
+  // ============================================================
+  // 3. TEXT ANIMATION
+  // 25% – 55% (300–660 ms)
+  // ============================================================
+
   late final Animation<double> _teksOpacity = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.45, 0.70, curve: Curves.easeOutCubic),
-  );
-  late final Animation<Offset> _teksOffset = Tween<Offset>(
-    begin: const Offset(0, 0.18),
-    end: Offset.zero,
-  ).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.45, 0.70, curve: Curves.easeOutCubic),
-    ),
+    curve: const Interval(0.25, 0.55, curve: Curves.easeOutCubic),
   );
 
-  // 4. Tahan: 70% – 82%
+  late final Animation<Offset> _teksOffset =
+      Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.25, 0.55, curve: Curves.easeOutCubic),
+        ),
+      );
 
-  // 5. Fade-out isi: 82% – 100%, disertai voal putih agar mulus
-  //    menyatu ke halaman berikutnya.
+  // ============================================================
+  // 4. HOLD ANIMATION
+  // 55% – 75% (660–900 ms)
+  // ============================================================
+
+  // Tidak membutuhkan animasi tambahan.
+  // Logo dan teks tetap terlihat.
+
+  // ============================================================
+  // 5. FADE OUT ANIMATION
+  // 75% – 100% (900–1200 ms)
+  // ============================================================
+
   late final Animation<double> _isiKeluar = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.82, 1.0, curve: Curves.easeIn),
+    curve: const Interval(0.75, 1.0, curve: Curves.easeIn),
   );
+
+  // ============================================================
+  // 6. WHITE TRANSITION
+  // 78% – 100% (936–1200 ms)
+  // ============================================================
+
   late final Animation<double> _voalPutih = CurvedAnimation(
     parent: _controller,
-    curve: const Interval(0.84, 1.0, curve: Curves.easeInOut),
+    curve: const Interval(0.78, 1.0, curve: Curves.easeInOut),
   );
+
+  // ============================================================
+  // DISPOSE
+  // ============================================================
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
+
+  // ============================================================
+  // LOGO WIDGET
+  // ============================================================
 
   Widget _logo() {
     return Container(
@@ -111,14 +145,13 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ],
       ),
-      child: Image.asset(
-        'ic_launcher.png',
-        width: 84,
-        height: 84,
-        fit: BoxFit.contain,
-      ),
+      child: Image.asset('ic_launcher.png', width: 84, height: 84, fit: BoxFit.contain),
     );
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -130,38 +163,45 @@ class _SplashScreenState extends State<SplashScreen>
           return Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              // BACKGROUND (navy gelap → navy utama)
-              Container(
-                color: Color.lerp(_navyGelap, AppColors.navy, _bg.value),
-              ),
+              // =================================================
+              // BACKGROUND
+              // =================================================
 
-              // ISI: logo + nama aplikasi
+              Container(color: Color.lerp(_navyGelap, AppColors.navy, _bg.value)),
+
+              // =================================================
+              // LOGO + APP NAME
+              // =================================================
               Opacity(
                 opacity: 1 - _isiKeluar.value,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
+                      // LOGO
                       Opacity(
                         opacity: _logoOpacity.value,
-                        child: Transform.scale(
-                          scale: _logoScale.value,
-                          child: _logo(),
-                        ),
+                        child: Transform.scale(scale: _logoScale.value, child: _logo()),
                       ),
+
                       const SizedBox(height: 24),
+
+                      // APP NAME
                       Opacity(
                         opacity: _teksOpacity.value,
                         child: Transform.translate(
                           offset: _teksOffset.value,
-                          child: Text(
-                            AppConstants.appName,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              AppConstants.appName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
                             ),
                           ),
                         ),
@@ -171,10 +211,10 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              // VOAL PUTIH penutup animasi fade-out
-              ColoredBox(
-                color: Colors.white.withValues(alpha: _voalPutih.value),
-              ),
+              // =================================================
+              // WHITE FADE TRANSITION
+              // =================================================
+              ColoredBox(color: Colors.white.withValues(alpha: _voalPutih.value)),
             ],
           );
         },
