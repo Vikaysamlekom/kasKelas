@@ -24,8 +24,7 @@ class PengaturanScreen extends StatefulWidget {
 }
 
 class _PengaturanScreenState extends State<PengaturanScreen> {
-  final SchoolProfileRepository _schoolProfileRepository =
-      SchoolProfileRepository();
+  final SchoolProfileRepository _schoolProfileRepository = SchoolProfileRepository();
   String? _namaBendahara;
 
   @override
@@ -44,9 +43,8 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat profil bendahara: $error')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal memuat profil bendahara: $error')));
     }
   }
 
@@ -124,7 +122,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           const SizedBox(height: 8),
           _tile(
             icon: Icons.logout_rounded,
-            title: 'Logout',
+            title: 'Keluar',
             subtitle: 'Keluar dari aplikasi',
             color: AppColors.danger,
             onTap: () => _logout(context, session),
@@ -135,9 +133,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
               children: <Widget>[
                 Text(
                   'Kas Bintang Nusantara',
-                  style: AppText.bodySmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppText.bodySmall.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text('Versi ${AppConstants.appVersion}', style: AppText.bodySmall),
@@ -150,21 +146,17 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   }
 
   Future<T?> _push<T>(BuildContext context, Widget page) {
-    return Navigator.of(context).push<T>(
-      MaterialPageRoute<T>(builder: (_) => page),
-    );
+    return Navigator.of(context).push<T>(MaterialPageRoute<T>(builder: (_) => page));
   }
 
-  Future<void> _logout(
-    BuildContext context,
-    SessionProvider session,
-  ) async {
+  Future<void> _logout(BuildContext context, SessionProvider session) async {
     final bool ok = await showConfirmDialog(
       context,
-      title: 'Logout',
-      message: 'Anda akan keluar dari aplikasi.\n'
+      title: 'Keluar',
+      message:
+          'Anda akan keluar dari aplikasi.\n'
           'Pastikan perubahan data sudah tersimpan.',
-      confirmLabel: 'Logout',
+      confirmLabel: 'Keluar',
     );
     if (!ok || !context.mounted) return;
 
@@ -182,9 +174,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     return Card(
       elevation: 0,
       color: AppColors.navy,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -196,10 +186,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.person_rounded,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.person_rounded, color: Colors.white),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -217,10 +204,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   const SizedBox(height: 2),
                   Text(
                     'Username: ${session.user?.username ?? '-'}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -236,10 +220,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
       child: Text(
         text,
-        style: AppText.bodySmall.copyWith(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.6,
-        ),
+        style: AppText.bodySmall.copyWith(fontWeight: FontWeight.bold, letterSpacing: 0.6),
       ),
     );
   }
@@ -258,9 +239,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: BorderSide(
-          color: color == null ? AppColors.divider : color.withValues(alpha: 0.3),
-        ),
+        side: BorderSide(color: color == null ? AppColors.divider : color.withValues(alpha: 0.3)),
       ),
       child: ListTile(
         leading: Container(
@@ -277,10 +256,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c),
         ),
         subtitle: Text(subtitle, style: AppText.bodySmall),
-        trailing: Icon(
-          Icons.chevron_right_rounded,
-          color: color ?? AppColors.textMuted,
-        ),
+        trailing: Icon(Icons.chevron_right_rounded, color: color ?? AppColors.textMuted),
         onTap: onTap,
       ),
     );

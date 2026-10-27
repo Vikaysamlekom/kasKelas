@@ -23,6 +23,109 @@ class PaymentFormScreen extends StatefulWidget {
   State<PaymentFormScreen> createState() => _PaymentFormScreenState();
 }
 
+class StudentPickerSheet extends StatefulWidget {
+  const StudentPickerSheet({super.key, required this.students});
+
+  final List<StudentModel> students;
+
+  @override
+  State<StudentPickerSheet> createState() => _StudentPickerSheetState();
+}
+
+class _StudentPickerSheetState extends State<StudentPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String query = _searchController.text.trim().toLowerCase();
+    final List<StudentModel> filteredStudents = widget.students
+        .where(
+          (StudentModel student) => student.name.toLowerCase().contains(query),
+        )
+        .toList();
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SizedBox(
+          height: 420,
+          child: Column(
+            children: <Widget>[
+              Container(
+                width: 42,
+                height: 5,
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'Pilih Siswa',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Cari nama siswa',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: filteredStudents.isEmpty
+                    ? const Center(child: Text('Siswa tidak ditemukan.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        itemCount: filteredStudents.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final StudentModel student = filteredStudents[index];
+                          return ListTile(
+                            title: Text(student.name),
+                            subtitle: Text(student.className ?? '-'),
+                            onTap: () => Navigator.of(context).pop(student),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PaymentFormScreenState extends State<PaymentFormScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -146,10 +249,26 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     // Isi nominal otomatis hanya bila kosong atau masih bernilai nominal jenis
     // kas sebelumnya (agar angka yang diketik manual tidak tertimpa).
     final String text = _nominalController.text;
-    if (ct != null && (text.isEmpty || (previous != null && text == previous.amount.toString()))) {
+    if (ct != null &&
+        (text.isEmpty ||
+            (previous != null && text == previous.amount.toString()))) {
       _nominalController.text = ct.amount.toString();
     }
     _refreshStatus();
+  }
+
+  Future<StudentModel?> _showStudentPicker(List<StudentModel> students) async {
+    return showModalBottomSheet<StudentModel>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return StudentPickerSheet(students: students);
+      },
+    );
   }
 
   Future<void> _submit() async {
@@ -176,12 +295,15 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         year: _year,
         paidDate: _paidDate.toIso8601String(),
         paymentMethod: PaymentMethod.tunai,
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
         userId: userId,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Pembayaran berhasil dicatat.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pembayaran berhasil dicatat.')),
+        );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
@@ -193,7 +315,8 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Kartu "Status Siswa Periode Ini": kewajiban mengikuti nominal jenis
@@ -221,7 +344,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               ],
             )
           else if (_statusError != null)
-            Text(_statusError!, style: AppText.bodySmall.copyWith(color: AppColors.danger))
+            Text(
+              _statusError!,
+              style: AppText.bodySmall.copyWith(color: AppColors.danger),
+            )
           else if (status == null || kas == null)
             Text(
               'Pilih siswa, jenis kas, & periode untuk melihat status '
@@ -287,25 +413,48 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
             padding: const EdgeInsets.all(16),
             children: <Widget>[
               // SISWA
-              DropdownButtonFormField<int>(
+              FormField<int>(
                 initialValue: _studentId,
-                decoration: const InputDecoration(
-                  labelText: 'Siswa *',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
-                ),
-                items: provider.students.map((StudentModel s) {
-                  return DropdownMenuItem<int>(
-                    value: s.id,
-                    child: Text(
-                      '${s.name} (${s.className ?? '-'})',
-                      overflow: TextOverflow.ellipsis,
+                validator: (int? value) =>
+                    value == null ? 'Siswa wajib dipilih' : null,
+                builder: (FormFieldState<int> field) {
+                  StudentModel? selectedStudent;
+                  for (final StudentModel student in provider.students) {
+                    if (student.id == field.value) {
+                      selectedStudent = student;
+                      break;
+                    }
+                  }
+                  return InkWell(
+                    onTap: provider.students.isEmpty
+                        ? null
+                        : () async {
+                            final StudentModel? student =
+                                await _showStudentPicker(provider.students);
+                            if (student == null || !mounted) return;
+                            setState(() => _studentId = student.id);
+                            field.didChange(student.id);
+                            _refreshStatus();
+                          },
+                    borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Siswa *',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+                        errorText: field.errorText,
+                      ),
+                      child: Text(
+                        selectedStudent == null
+                            ? 'Pilih siswa'
+                            : '${selectedStudent.name} (${selectedStudent.className ?? '-'})',
+                        overflow: TextOverflow.ellipsis,
+                        style: selectedStudent == null
+                            ? AppText.body.copyWith(color: AppColors.textMuted)
+                            : AppText.body,
+                      ),
                     ),
                   );
-                }).toList(),
-                validator: (int? v) => v == null ? 'Siswa wajib dipilih' : null,
-                onChanged: (int? v) {
-                  setState(() => _studentId = v);
-                  _refreshStatus();
                 },
               ),
               if (provider.students.isEmpty)
@@ -330,11 +479,14 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                     .map(
                       (CashTypeModel c) => DropdownMenuItem<int>(
                         value: c.id,
-                        child: Text('${c.name} · ${Formatters.rupiah(c.amount)}'),
+                        child: Text(
+                          '${c.name} · ${Formatters.rupiah(c.amount)}',
+                        ),
                       ),
                     )
                     .toList(),
-                validator: (int? v) => v == null ? 'Jenis kas wajib dipilih' : null,
+                validator: (int? v) =>
+                    v == null ? 'Jenis kas wajib dipilih' : null,
                 onChanged: (int? v) {
                   CashTypeModel? ct;
                   for (final CashTypeModel c in cashTypes.cashTypes) {
@@ -346,7 +498,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                   _onCashTypeChanged(ct);
                 },
               ),
-              if (cashTypes.cashTypes.where((CashTypeModel c) => c.isActive).isEmpty)
+              if (cashTypes.cashTypes
+                  .where((CashTypeModel c) => c.isActive)
+                  .isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
@@ -355,7 +509,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                         : 'Belum ada jenis kas aktif. Tambahkan dari menu '
                               'Siswa > Jenis Kas.',
                     style: AppText.caption.copyWith(
-                      color: cashTypes.isLoading ? AppColors.textMuted : AppColors.danger,
+                      color: cashTypes.isLoading
+                          ? AppColors.textMuted
+                          : AppColors.danger,
                     ),
                   ),
                 ),
@@ -375,7 +531,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                       ),
                       items: <DropdownMenuItem<int>>[
                         for (int m = 1; m <= 12; m++)
-                          DropdownMenuItem<int>(value: m, child: Text(Formatters.namaBulan(m))),
+                          DropdownMenuItem<int>(
+                            value: m,
+                            child: Text(Formatters.namaBulan(m)),
+                          ),
                       ],
                       onChanged: (int? v) {
                         if (v != null) {
@@ -418,7 +577,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                     labelText: 'Tanggal Bayar *',
                     prefixIcon: Icon(Icons.event_available_outlined),
                   ),
-                  child: Text(Formatters.tanggal(_paidDate), style: AppText.body),
+                  child: Text(
+                    Formatters.tanggal(_paidDate),
+                    style: AppText.body,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -427,7 +589,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
               TextFormField(
                 controller: _nominalController,
                 keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Nominal *',
                   prefixIcon: Icon(Icons.payments_outlined),
@@ -463,7 +627,11 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: <Widget>[
-                    const Icon(Icons.badge_outlined, color: AppColors.textMuted, size: 20),
+                    const Icon(
+                      Icons.badge_outlined,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -473,7 +641,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                           const SizedBox(height: 2),
                           Text(
                             session.user?.fullName ?? '-',
-                            style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                            style: AppText.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
@@ -490,7 +660,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
 
               // SIMPAN
               _isSaving
-                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
+                  ? const SizedBox(
+                      height: 52,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
                   : FilledButton.icon(
                       onPressed: _submit,
                       icon: const Icon(Icons.check_rounded),
