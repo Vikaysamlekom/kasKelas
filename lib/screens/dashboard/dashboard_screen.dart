@@ -70,19 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: <Widget>[
-          SliverAppBar(
-            title: const Text('Dashboard'),
-            actions: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: IconButton(
-                  tooltip: 'Buka profil sekolah',
-                  onPressed: () => _openProfile(context),
-                  icon: _buildSchoolLogo(36),
-                ),
-              ),
-            ],
-          ),
+          SliverAppBar(title: const Text('Dashboard')),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             sliver: SliverList.list(

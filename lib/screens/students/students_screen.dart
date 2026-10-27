@@ -56,8 +56,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
   /// Lazy loading: muat halaman berikutnya saat mendekati dasar list.
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final double remaining =
-        _scrollController.position.maxScrollExtent - _scrollController.offset;
+    final double remaining = _scrollController.position.maxScrollExtent - _scrollController.offset;
     if (remaining < 600) {
       context.read<StudentsProvider>().loadMore();
     }
@@ -73,11 +72,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
   }
 
   Future<void> _openForm({StudentModel? student}) async {
-    final bool? changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => StudentFormScreen(student: student),
-      ),
-    );
+    final bool? changed = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute<bool>(builder: (_) => StudentFormScreen(student: student)));
     if (changed == true && mounted) {
       context.read<StudentsProvider>().load();
     }
@@ -85,9 +81,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
   Future<void> _openDetail(StudentModel student) async {
     final bool? changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => StudentDetailScreen(studentId: student.id!),
-      ),
+      MaterialPageRoute<bool>(builder: (_) => StudentDetailScreen(studentId: student.id!)),
     );
     if (changed == true && mounted) {
       context.read<StudentsProvider>().load();
@@ -103,9 +97,8 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
     if (!mounted) return;
     if (result.successCount == 0 && result.errorCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Import dibatalkan.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Import dibatalkan.')));
       return;
     }
 
@@ -113,10 +106,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(
-            'Hasil Import CSV',
-            style: AppText.title.copyWith(fontSize: 17),
-          ),
+          title: Text('Hasil Import CSV', style: AppText.title.copyWith(fontSize: 17)),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -139,9 +129,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
                             'Baris ${r.rowNumber}: ${r.error}',
-                            style: AppText.bodySmall.copyWith(
-                              color: AppColors.danger,
-                            ),
+                            style: AppText.bodySmall.copyWith(color: AppColors.danger),
                           ),
                         ),
                   ],
@@ -150,10 +138,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
             ),
           ),
           actions: <Widget>[
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tutup'),
-            ),
+            FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Tutup')),
           ],
         );
       },
@@ -163,16 +148,16 @@ class _StudentsScreenState extends State<StudentsScreen> {
   Future<void> _exportCsv() async {
     try {
       final String path = await context.read<StudentsProvider>().exportToCsv();
-      await SharePlus.instance.share(ShareParams(
-        files: <XFile>[XFile(path)],
-        text: 'Data Siswa Kas Bintang Nusantara',
-        downloadFallbackEnabled: true,
-      ));
+      await SharePlus.instance.share(
+        ShareParams(
+          files: <XFile>[XFile(path)],
+          text: 'Data Siswa Kas Bintang Nusantara',
+          downloadFallbackEnabled: true,
+        ),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal export CSV: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal export CSV: $e')));
       }
     }
   }
@@ -197,16 +182,12 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   _exportCsv();
                   break;
                 case 'kelas':
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(builder: (_) => const KelasScreen()),
-                  );
+                  Navigator.of(context)
+                      .push<void>(MaterialPageRoute<void>(builder: (_) => const KelasScreen()));
                   break;
                 case 'jenis':
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const JenisKasScreen(),
-                    ),
-                  );
+                  Navigator.of(context)
+                      .push<void>(MaterialPageRoute<void>(builder: (_) => const JenisKasScreen()));
                   break;
               }
             },
@@ -215,11 +196,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 value: 'import',
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.file_upload_outlined),
+                    Icon(Icons.file_download_outlined),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Import Siswa (CSV)'),
-                    ),
+                    Expanded(child: Text('Import Siswa (CSV)')),
                   ],
                 ),
               ),
@@ -227,11 +206,9 @@ class _StudentsScreenState extends State<StudentsScreen> {
                 value: 'export',
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.file_download_outlined),
+                    Icon(Icons.file_upload_outlined),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Export Siswa (CSV)'),
-                    ),
+                    Expanded(child: Text('Export Siswa (CSV)')),
                   ],
                 ),
               ),
@@ -242,9 +219,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   children: <Widget>[
                     Icon(Icons.meeting_room_outlined),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Kelola Kelas & Jurusan'),
-                    ),
+                    Expanded(child: Text('Kelola Kelas & Jurusan')),
                   ],
                 ),
               ),
@@ -254,9 +229,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   children: <Widget>[
                     Icon(Icons.money_outlined),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Kelola Jenis Kas'),
-                    ),
+                    Expanded(child: Text('Kelola Jenis Kas')),
                   ],
                 ),
               ),
@@ -299,10 +272,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   FilterDropdown<int>(
                     label: 'Kelas',
                     value: students.filter.classId,
-                    items: (classes.classes
-                            .where((c) => c.kelas.isActive)
-                            .map((c) => (c.kelas.name, c.kelas.id!)))
-                        .toList(),
+                    items:
+                        (classes.classes
+                                .where((c) => c.kelas.isActive)
+                                .map((c) => (c.kelas.name, c.kelas.id!)))
+                            .toList(),
                     onChanged: (int? v) {
                       students.applyFilter(classId: v ?? 0);
                     },
@@ -311,10 +285,11 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   FilterDropdown<int>(
                     label: 'Jurusan',
                     value: students.filter.majorId,
-                    items: (classes.majors
-                            .where((m) => m.major.isActive)
-                            .map((m) => (m.major.name, m.major.id!)))
-                        .toList(),
+                    items:
+                        (classes.majors
+                                .where((m) => m.major.isActive)
+                                .map((m) => (m.major.name, m.major.id!)))
+                            .toList(),
                     onChanged: (int? v) {
                       students.applyFilter(majorId: v ?? 0);
                     },
@@ -419,21 +394,14 @@ class _ListView extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
         child: Center(
-          child: SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
+          child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       );
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
-        child: Text(
-          'Menampilkan ${students.length} dari $total siswa',
-          style: AppText.caption,
-        ),
+        child: Text('Menampilkan ${students.length} dari $total siswa', style: AppText.caption),
       ),
     );
   }
@@ -448,8 +416,7 @@ class _StudentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String genderLabel = student.gender == 'P' ? 'Perempuan' : 'Laki-laki';
-    final Color genderColor =
-        student.gender == 'P' ? AppColors.blue : AppColors.teal;
+    final Color genderColor = student.gender == 'P' ? AppColors.blue : AppColors.teal;
 
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -466,11 +433,7 @@ class _StudentTile extends StatelessWidget {
             ),
             child: Text(
               _initial(student.name),
-              style: TextStyle(
-                color: genderColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: genderColor, fontWeight: FontWeight.w800, fontSize: 16),
             ),
           ),
           const SizedBox(width: 12),
@@ -495,9 +458,7 @@ class _StudentTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     student.majorName!,
-                    style: AppText.caption.copyWith(
-                      color: AppColors.textMuted,
-                    ),
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

@@ -24,10 +24,7 @@ Future<bool?> showRecoverySetupSheet(BuildContext context) {
 
 /// Tawaran sekali per aplikasi terbuka: aktifkan pemulihan PIN atau nanti.
 /// [info] sudah diperiksa memuat `siap == false` oleh pemanggil.
-Future<void> showRecoveryPromptDialog(
-  BuildContext context, {
-  required RecoveryInfo info,
-}) {
+Future<void> showRecoveryPromptDialog(BuildContext context, {required RecoveryInfo info}) {
   return showDialog<void>(
     context: context,
     builder: (BuildContext context) {
@@ -41,10 +38,8 @@ Future<void> showRecoveryPromptDialog(
           style: AppText.bodySmall,
         ),
         actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Nanti'),
-          ),
+          OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Nanti')),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
@@ -97,8 +92,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
   }
 
   Future<void> _muatInfo() async {
-    final RecoveryInfo info =
-        await context.read<SessionProvider>().recoveryInfo();
+    final RecoveryInfo info = await context.read<SessionProvider>().recoveryInfo();
     if (!mounted) return;
     setState(() => _info = info);
   }
@@ -115,9 +109,8 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
     if (_kodeBaru == null) return;
     await Clipboard.setData(ClipboardData(text: _kodeBaru!));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kode pemulihan disalin.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Kode pemulihan disalin.')));
     }
   }
 
@@ -130,20 +123,20 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
       return;
     }
     if (a1.toLowerCase() == a2.toLowerCase()) {
-      setState(() => _error =
-          'Jawaban kedua sebaiknya berbeda — jawaban yang sama mudah '
-          'ditebak.');
+      setState(
+        () => _error =
+            'Jawaban kedua sebaiknya berbeda — jawaban yang sama mudah '
+            'ditebak.',
+      );
       return;
     }
     // Kode wajib diaktifkan bila belum pernah ada dan user memilih pakai.
     if (_pakaiKode && _kodeBaru == null && !(_info?.codeSet ?? false)) {
-      setState(() => _error =
-          'Tekan "Buat Kode Baru" untuk mengaktifkan kode pemulihan.');
+      setState(() => _error = 'Tekan "Buat Kode Baru" untuk mengaktifkan kode pemulihan.');
       return;
     }
     if (_pakaiKode && _kodeBaru != null && !_sudahMencatatKode) {
-      setState(() => _error =
-          'Centang "Saya sudah mencatat kode ini" sebelum menyimpan.');
+      setState(() => _error = 'Centang "Saya sudah mencatat kode ini" sebelum menyimpan.');
       return;
     }
 
@@ -155,12 +148,12 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
     final int? userId = session.user?.id;
     try {
       await session.activateRecovery(
-            q1: AppConstants.recoveryQuestions[_q1Index],
-            a1: a1,
-            q2: AppConstants.recoveryQuestions[_q2Index],
-            a2: a2,
-            recoveryCode: (_pakaiKode && _kodeBaru != null) ? _kodeBaru : null,
-          );
+        q1: AppConstants.recoveryQuestions[_q1Index],
+        a1: a1,
+        q2: AppConstants.recoveryQuestions[_q2Index],
+        a2: a2,
+        recoveryCode: (_pakaiKode && _kodeBaru != null) ? _kodeBaru : null,
+      );
       await DBHelper.instance.logAudit(
         userId: userId,
         action: 'setup_recovery',
@@ -170,10 +163,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Pemulihan PIN aktif.'),
-          backgroundColor: AppColors.success,
-        ),
+        SnackBar(content: const Text('Pemulihan PIN aktif.'), backgroundColor: AppColors.success),
       );
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -217,10 +207,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                 Wrap(
                   spacing: 8,
                   children: <Widget>[
-                    _KeadaanChip(
-                      label: 'Pertanyaan',
-                      aktif: pertanyaanAktif,
-                    ),
+                    _KeadaanChip(label: 'Pertanyaan', aktif: pertanyaanAktif),
                     _KeadaanChip(label: 'Kode', aktif: kodeAktif),
                   ],
                 ),
@@ -234,16 +221,13 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                     prefixIcon: Icon(Icons.help_outline_rounded),
                   ),
                   items: <DropdownMenuItem<int>>[
-                    for (int i = 0;
-                        i < AppConstants.recoveryQuestions.length;
-                        i++)
+                    for (int i = 0; i < AppConstants.recoveryQuestions.length; i++)
                       DropdownMenuItem<int>(
                         value: i,
                         child: Text(AppConstants.recoveryQuestions[i]),
                       ),
                   ],
-                  onChanged: (int? v) =>
-                      setState(() => _q1Index = v ?? _q1Index),
+                  onChanged: (int? v) => setState(() => _q1Index = v ?? _q1Index),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -264,16 +248,13 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                     prefixIcon: Icon(Icons.help_outline_rounded),
                   ),
                   items: <DropdownMenuItem<int>>[
-                    for (int i = 0;
-                        i < AppConstants.recoveryQuestions.length;
-                        i++)
+                    for (int i = 0; i < AppConstants.recoveryQuestions.length; i++)
                       DropdownMenuItem<int>(
                         value: i,
                         child: Text(AppConstants.recoveryQuestions[i]),
                       ),
                   ],
-                  onChanged: (int? v) =>
-                      setState(() => _q2Index = v ?? _q2Index),
+                  onChanged: (int? v) => setState(() => _q2Index = v ?? _q2Index),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -300,20 +281,17 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                       children: <Widget>[
                         Row(
                           children: <Widget>[
-                            const Icon(Icons.key_rounded,
-                                size: 18, color: AppColors.navy),
+                            const Icon(Icons.key_rounded, size: 18, color: AppColors.navy),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Kode Pemulihan',
-                                style: AppText.sectionTitle
-                                    .copyWith(fontSize: 14),
+                                style: AppText.sectionTitle.copyWith(fontSize: 14),
                               ),
                             ),
                             Switch(
                               value: _pakaiKode,
-                              onChanged: (bool v) =>
-                                  setState(() => _pakaiKode = v),
+                              onChanged: (bool v) => setState(() => _pakaiKode = v),
                             ),
                           ],
                         ),
@@ -331,9 +309,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                               decoration: BoxDecoration(
                                 color: AppColors.navy.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: AppColors.navy.withValues(alpha: 0.3),
-                                ),
+                                border: Border.all(color: AppColors.navy.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: <Widget>[
@@ -351,8 +327,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                                   IconButton(
                                     tooltip: 'Salin',
                                     onPressed: _salinKode,
-                                    icon: const Icon(Icons.copy_rounded,
-                                        size: 20),
+                                    icon: const Icon(Icons.copy_rounded, size: 20),
                                   ),
                                 ],
                               ),
@@ -361,28 +336,25 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                             CheckboxListTile(
                               value: _sudahMencatatKode,
                               contentPadding: EdgeInsets.zero,
-                              controlAffinity:
-                                  ListTileControlAffinity.leading,
+                              controlAffinity: ListTileControlAffinity.leading,
                               dense: true,
-                              title: const Text(
-                                'Saya sudah mencatat kode ini',
-                              ),
-                              onChanged: (bool? v) => setState(
-                                  () => _sudahMencatatKode = v ?? false),
+                              title: const Text('Saya sudah mencatat kode ini'),
+                              onChanged: (bool? v) =>
+                                  setState(() => _sudahMencatatKode = v ?? false),
                             ),
                           ] else
                             OutlinedButton.icon(
                               onPressed: _menyimpan ? null : _buatKode,
                               icon: const Icon(Icons.casino_rounded),
-                              label: Text(kodeAktif
-                                  ? 'Buat Kode Baru (perbarui)'
-                                  : 'Buat Kode Baru'),
+                              label: Text(
+                                kodeAktif ? 'Buat Kode Baru (perbarui)' : 'Buat Kode Baru',
+                              ),
                             ),
                         ] else
                           Text(
                             kodeAktif
                                 ? 'Kode yang sudah aktif tetap berlaku. '
-                                    'Bila ingin nonaktif, hubungi pengembang.'
+                                      'Bila ingin nonaktif, hubungi pengembang.'
                                 : 'Kode pemulihan tidak diaktifkan.',
                             style: AppText.bodySmall,
                           ),
@@ -402,9 +374,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                     ),
                     child: Text(
                       _error!,
-                      style: AppText.bodySmall.copyWith(
-                        color: AppColors.danger,
-                      ),
+                      style: AppText.bodySmall.copyWith(color: AppColors.danger),
                     ),
                   ),
                 ],
@@ -415,10 +385,7 @@ class _RecoverySetupSheetState extends State<RecoverySetupSheet> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.save_rounded),
                   label: const Text('Simpan Pemulihan'),
@@ -449,8 +416,7 @@ class _KeadaanChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: (aktif ? AppColors.teal : AppColors.textMuted)
-            .withValues(alpha: 0.12),
+        color: (aktif ? AppColors.teal : AppColors.textMuted).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

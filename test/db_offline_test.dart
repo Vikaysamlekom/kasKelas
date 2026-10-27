@@ -40,8 +40,8 @@ void main() {
   // PIN uji milik sendiri — aplikasi tidak menyediakan PIN bawaan.
   const String pinUji = '927364';
 
-  /// Jenis kas bawaan bernominal 0 (tunggakan tidak diisi otomatis). Helper ini
-  /// menetapkan nominal untuk test yang memang perlu memeriksa status bayar.
+  /// Helper ini menetapkan nominal untuk test yang memang perlu memeriksa
+  /// status bayar.
   Future<void> setKasBulananAmount(int amount) {
     return DBHelper.instance.update(
       DBHelper.tblCashTypes,
@@ -136,26 +136,29 @@ void main() {
       }
 
       expect(await DBHelper.instance.count(DBHelper.tblUsers), 1);
-      expect(await DBHelper.instance.count(DBHelper.tblCashTypes), 3);
+      expect(await DBHelper.instance.count(DBHelper.tblCashTypes), 1);
       expect(await DBHelper.instance.count(DBHelper.tblExpenseCategories), 6);
       expect(await DBHelper.instance.count(DBHelper.tblSchoolProfile), 1);
     });
 
-    test('nominal jenis kas bawaan 0 agar tunggakan tidak otomatis', () async {
+    test('jenis kas bulanan bawaan bernominal Rp10.000', () async {
       final List<Map<String, Object?>> rows =
           await DBHelper.instance.query(DBHelper.tblCashTypes);
-      expect(rows, hasLength(3));
+      expect(rows, hasLength(1));
+      expect(rows.single['name'], 'Kas Bulanan');
+      expect(rows.single['code'], 'BULANAN');
+      expect(rows.single['frequency'], 'bulanan');
       for (final Map<String, Object?> r in rows) {
         expect(
           r['amount'],
-          0,
-          reason: 'Nominal bawaan ${r['name']} harus 0, bukan angka otomatis',
+          10000,
+          reason: 'Nominal bawaan ${r['name']} harus Rp10.000',
         );
       }
       expect(
         await pembayaran.kasPerBulan(),
-        0,
-        reason: 'Kewajiban bulanan harus 0 sebelum bendahara mengisi nominal',
+        10000,
+        reason: 'Kas Bulanan bawaan bernilai Rp10.000 per siswa',
       );
     });
 
@@ -325,17 +328,17 @@ void main() {
 
     test('kewajiban mengikuti jenis kas terpilih (bukan total sum)', () async {
       await setKasBulananAmount(25000);
-      final int kasSosialId =
-          (await DBHelper.instance.query(
-            DBHelper.tblCashTypes,
-            where: 'code = ?',
-            whereArgs: <Object?>['SOSIAL'],
-          )).first['id'] as int;
-      await DBHelper.instance.update(
+      final int kasSosialId = await DBHelper.instance.insert(
         DBHelper.tblCashTypes,
-        <String, Object?>{'amount': 10000},
-        where: 'id = ?',
-        whereArgs: <Object?>[kasSosialId],
+        <String, Object?>{
+          'name': 'Kas Sosial',
+          'code': 'SOSIAL',
+          'amount': 10000,
+          'frequency': 'sekali',
+          'due_day': 10,
+          'is_active': 1,
+          'created_at': now.toIso8601String(),
+        },
       );
 
       // Belum bayar: sisa tunggakan = nominal jenis kas terpilih saja.

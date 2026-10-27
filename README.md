@@ -24,7 +24,7 @@ secara lokal di perangkat menggunakan SQLite.
 | --- | --- |
 | Nama aplikasi | Kas Bintang Nusantara |
 | Application ID | `com.bintangnusantara.kas` |
-| Versi paket Android | `1.0.6` (`versionCode` `6`) |
+| Versi paket Android | `1.0.7` (`versionCode` `6`) |
 | Minimum Android | Android 7.0 (API 24) |
 | Penyimpanan data | SQLite lokal |
 | Akun awal | Pengguna membuat PIN sendiri saat pertama kali membuka aplikasi |

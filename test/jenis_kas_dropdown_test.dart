@@ -25,7 +25,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 ///
 /// Akar masalahnya: `CashTypesProvider.load()` tidak pernah dipanggil di
 /// `PaymentFormScreen`, sehingga `_cashTypes` tetap kosong walaupun database
-/// sudah berisi 3 jenis kas default. Dropdown jadi kosong dan tidak ada yang
+/// sudah berisi satu jenis kas bulanan bawaan. Dropdown jadi kosong dan tidak ada yang
 /// bisa dipilih.
 ///
 /// Test ini sengaja memakai provider KOSONG (persis kondisi sebelum fix) lalu
@@ -147,7 +147,7 @@ void main() {
     });
 
     // Kondisi SEBELUM fix: provider benar-benar kosong, meski DB sudah berisi
-    // 3 jenis kas default hasil seeding.
+    // jenis kas bulanan bawaan hasil seeding.
     final CashTypesProvider kosong = CashTypesProvider(
       cashTypeRepository: cashTypeRepo,
     );
@@ -174,17 +174,22 @@ void main() {
       isTrue,
       reason: 'Jenis kas bawaan "Kas Bulanan" harus termuat',
     );
+    expect(kosong.cashTypes, hasLength(1));
+    expect(kosong.cashTypes.single.name, 'Kas Bulanan');
+    expect(kosong.cashTypes.single.amount, 10000);
+    expect(kosong.cashTypes.single.frequency, 'bulanan');
 
     // 2. Dropdown harus bisa dibuka dan menampilkan isi.
     await tester.tap(find.byType(DropdownButtonFormField<int>).at(1));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    // Item dropdown menampilkan "Nama · Rp nominal", jadi pakai textContaining.
-    expect(find.textContaining('Kas Tahunan'), findsWidgets);
-    expect(find.textContaining('Kas Sosial'), findsWidgets);
+    // Jenis kas bawaan hanya Kas Bulanan.
+    expect(find.textContaining('Kas Bulanan'), findsWidgets);
+    expect(find.textContaining('Kas Tahunan'), findsNothing);
+    expect(find.textContaining('Kas Sosial'), findsNothing);
 
-    // 3. Pilih salah satu jenis kas.
+    // 3. Pilih jenis kas bulanan bawaan.
     await tester.tap(find.textContaining('Kas Bulanan').last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
