@@ -42,11 +42,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Future<void> _openForm() async {
     await context.read<PaymentProvider>().loadActiveStudents();
     if (!mounted) return;
-    final bool? changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => const PaymentFormScreen(),
-      ),
-    );
+    final bool? changed = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute<bool>(builder: (_) => const PaymentFormScreen()));
     if (changed == true && mounted) {
       context.read<PaymentProvider>().load();
     }
@@ -54,9 +51,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   Future<void> _openBukti(PaymentModel payment) async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => BuktiPembayaranScreen(paymentId: payment.id!),
-      ),
+      MaterialPageRoute<void>(builder: (_) => BuktiPembayaranScreen(paymentId: payment.id!)),
     );
     if (mounted) {
       context.read<PaymentProvider>().load();
@@ -67,19 +62,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final bool confirm = await showConfirmDialog(
       context,
       title: 'Hapus Pembayaran',
-      message:
-          'Hapus transaksi ${payment.paymentCode}?\nData tidak bisa dikembalikan.',
+      message: 'Hapus transaksi ${payment.paymentCode}?\nData tidak bisa dikembalikan.',
       confirmLabel: 'Ya, Hapus',
     );
     if (!confirm) return;
     if (!mounted) return;
 
-final int? userId = context.read<SessionProvider>().user?.id;
+    final int? userId = context.read<SessionProvider>().user?.id;
     await jalankanAksi(
       context,
-      () => context
-          .read<PaymentProvider>()
-          .deletePayment(payment.id!, userId: userId),
+      () => context.read<PaymentProvider>().deletePayment(payment.id!, userId: userId),
       konteks: 'Hapus pembayaran',
     );
   }
@@ -99,48 +91,29 @@ final int? userId = context.read<SessionProvider>().user?.id;
               final NavigatorState nav = Navigator.of(context);
               switch (value) {
                 case 'tunggakan':
-                  nav.push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const TunggakanScreen(),
-                    ),
-                  );
+                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const TunggakanScreen()));
                 case 'pengeluaran':
                   nav.push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const PengeluaranScreen(),
-                    ),
+                    MaterialPageRoute<void>(builder: (_) => const PengeluaranScreen()),
                   );
                 case 'riwayat':
                   nav.push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const RiwayatTransaksiScreen(),
-                    ),
+                    MaterialPageRoute<void>(builder: (_) => const RiwayatTransaksiScreen()),
                   );
                 case 'laporan':
-                  nav.push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LaporanScreen(),
-                    ),
-                  );
+                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const LaporanScreen()));
                 case 'audit':
-                  nav.push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const AuditLogScreen(),
-                    ),
-                  );
+                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const AuditLogScreen()));
               }
             },
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<String>>[
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               const PopupMenuItem<String>(
                 value: 'tunggakan',
                 child: Row(
                   children: <Widget>[
                     Icon(Icons.pending_actions_rounded),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Tunggakan'),
-                    ),
+                    Expanded(child: Text('Tunggakan')),
                   ],
                 ),
               ),
@@ -150,9 +123,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                   children: <Widget>[
                     Icon(Icons.remove_circle_outline),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Pengeluaran'),
-                    ),
+                    Expanded(child: Text('Pengeluaran')),
                   ],
                 ),
               ),
@@ -162,9 +133,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                   children: <Widget>[
                     Icon(Icons.receipt_long_outlined),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Riwayat Transaksi'),
-                    ),
+                    Expanded(child: Text('Riwayat Transaksi')),
                   ],
                 ),
               ),
@@ -174,9 +143,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                   children: <Widget>[
                     Icon(Icons.insert_chart_outlined_rounded),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Laporan'),
-                    ),
+                    Expanded(child: Text('Laporan')),
                   ],
                 ),
               ),
@@ -186,9 +153,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                   children: <Widget>[
                     Icon(Icons.history_rounded),
                     SizedBox(width: 8),
-                    Expanded(
-                      child: Text('Audit Log'),
-                    ),
+                    Expanded(child: Text('Audit Log')),
                   ],
                 ),
               ),
@@ -226,10 +191,11 @@ final int? userId = context.read<SessionProvider>().user?.id;
                   FilterDropdown<int>(
                     label: 'Kelas',
                     value: provider.filter.classId,
-                    items: (classes.classes
-                            .where((c) => c.kelas.isActive)
-                            .map((c) => (c.kelas.name, c.kelas.id!)))
-                        .toList(),
+                    items:
+                        (classes.classes
+                                .where((c) => c.kelas.isActive)
+                                .map((c) => (c.kelas.name, c.kelas.id!)))
+                            .toList(),
                     onChanged: (int? v) {
                       provider.applyFilter(classId: v ?? 0);
                     },
@@ -253,9 +219,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                           const SizedBox(height: 4),
                           Text(
                             Formatters.rupiah(provider.totalPenerimaan),
-                            style: AppText.amountMedium.copyWith(
-                              color: AppColors.navy,
-                            ),
+                            style: AppText.amountMedium.copyWith(color: AppColors.navy),
                           ),
                         ],
                       ),
@@ -270,9 +234,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
                           const SizedBox(height: 4),
                           Text(
                             '${provider.payments.length}',
-                            style: AppText.amountMedium.copyWith(
-                              color: AppColors.navy,
-                            ),
+                            style: AppText.amountMedium.copyWith(color: AppColors.navy),
                           ),
                         ],
                       ),
@@ -318,9 +280,7 @@ final int? userId = context.read<SessionProvider>().user?.id;
   static final List<(String, int)> _years = _buildYears();
 
   static List<(String, int)> _buildYears() {
-    return <(String, int)>[
-      for (final int y in AppDateRange.semuaTahun) (y.toString(), y),
-    ];
+    return <(String, int)>[for (final int y in AppDateRange.semuaTahun) (y.toString(), y)];
   }
 }
 
@@ -346,8 +306,7 @@ class _PaymentList extends StatelessWidget {
       return const EmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'Belum ada pembayaran',
-        message:
-            'Tekan "Buat Pembayaran" untuk mencatat transaksi pada periode terpilih.',
+        message: 'Tekan "Buat Pembayaran" untuk mencatat transaksi pada periode terpilih.',
       );
     }
     return RefreshIndicator(
@@ -359,11 +318,7 @@ class _PaymentList extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (BuildContext context, int index) {
           final PaymentModel p = payments[index];
-          return _PaymentTile(
-            payment: p,
-            onTap: () => onTap(p),
-            onDelete: () => onDelete(p),
-          );
+          return _PaymentTile(payment: p, onTap: () => onTap(p), onDelete: () => onDelete(p));
         },
       ),
     );
@@ -375,11 +330,7 @@ class _PaymentTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _PaymentTile({
-    required this.payment,
-    required this.onTap,
-    required this.onDelete,
-  });
+  const _PaymentTile({required this.payment, required this.onTap, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -396,11 +347,7 @@ class _PaymentTile extends StatelessWidget {
               color: AppColors.blue.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.payments_rounded,
-              color: AppColors.blue,
-              size: 22,
-            ),
+            child: const Icon(Icons.payments_rounded, color: AppColors.blue, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -438,26 +385,12 @@ class _PaymentTile extends StatelessWidget {
             children: <Widget>[
               Text(
                 Formatters.rupiah(payment.amount),
-                style: AppText.body.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navy,
-                ),
+                style: AppText.body.copyWith(fontWeight: FontWeight.w800, color: AppColors.navy),
               ),
               const SizedBox(height: 6),
               Row(
                 mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  StatusBadge.pembayaran(payment.status),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onLongPress: onDelete,
-                    child: const Icon(
-                      Icons.more_vert_rounded,
-                      size: 18,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
+                children: <Widget>[StatusBadge.pembayaran(payment.status)],
               ),
             ],
           ),
