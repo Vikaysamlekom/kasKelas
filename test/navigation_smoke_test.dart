@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';import 'package:kas_bintang_nusantara/core/theme.dart';
 import 'package:kas_bintang_nusantara/database/db_helper.dart';
+import 'package:kas_bintang_nusantara/models/school_profile_model.dart';
 import 'package:kas_bintang_nusantara/models/student_model.dart';
 import 'package:kas_bintang_nusantara/providers/cash_types_provider.dart';
 import 'package:kas_bintang_nusantara/providers/classes_provider.dart';
@@ -21,6 +22,8 @@ import 'package:kas_bintang_nusantara/repositories/kelas_repo.dart';
 import 'package:kas_bintang_nusantara/repositories/pembayaran_repo.dart';
 import 'package:kas_bintang_nusantara/repositories/pengeluaran_repo.dart';
 import 'package:kas_bintang_nusantara/repositories/siswa_repo.dart';
+import 'package:kas_bintang_nusantara/repositories/school_profile_repo.dart';
+import 'package:kas_bintang_nusantara/screens/dashboard/dashboard_screen.dart';
 import 'package:kas_bintang_nusantara/screens/payments/payments_screen.dart';
 import 'package:kas_bintang_nusantara/screens/payments/tunggakan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/pengeluaran/pengeluaran_screen.dart';
@@ -251,6 +254,36 @@ void main() {
   });
 
   setUp(seed);
+
+  smokeTest('Dashboard menampilkan logo dan nama sekolah', (
+    WidgetTester tester,
+  ) async {
+    await tester.runAsync(
+      () => SchoolProfileRepository().saveProfile(
+        SchoolProfileModel(
+          schoolName: 'SMK Logo Dashboard',
+          logoPath:
+              '${Directory.systemTemp.path}${Platform.pathSeparator}logo-dashboard-test.png',
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      wrap(const Scaffold(body: DashboardScreen())),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tick(tester);
+
+    expect(find.text('SMK Logo Dashboard'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget widget) => widget is Image && widget.image is FileImage,
+      ),
+      findsNWidgets(2),
+    );
+  });
 
   // ============================================================
   // TAB "LAINNYA" (PengaturanScreen)
