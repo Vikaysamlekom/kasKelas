@@ -15,7 +15,6 @@ import '../../widgets/app_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/filter_dropdown.dart';
 import '../../widgets/status_badge.dart';
-import 'jenis_kas_screen.dart';
 import 'kelas_screen.dart';
 import 'student_detail_screen.dart';
 import 'student_form_screen.dart';
@@ -185,10 +184,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
                   Navigator.of(context)
                       .push<void>(MaterialPageRoute<void>(builder: (_) => const KelasScreen()));
                   break;
-                case 'jenis':
-                  Navigator.of(context)
-                      .push<void>(MaterialPageRoute<void>(builder: (_) => const JenisKasScreen()));
-                  break;
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -220,16 +215,6 @@ class _StudentsScreenState extends State<StudentsScreen> {
                     Icon(Icons.meeting_room_outlined),
                     SizedBox(width: 8),
                     Expanded(child: Text('Kelola Kelas & Jurusan')),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'jenis',
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.money_outlined),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Kelola Jenis Kas')),
                   ],
                 ),
               ),

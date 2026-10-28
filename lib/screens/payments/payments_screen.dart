@@ -15,11 +15,9 @@ import '../../widgets/filter_dropdown.dart';
 import '../../widgets/status_badge.dart';
 import 'bukti_pembayaran_screen.dart';
 import 'payment_form_screen.dart';
-import 'tunggakan_screen.dart';
 import '../laporan/laporan_screen.dart';
-import '../pengeluaran/pengeluaran_screen.dart';
-import '../transactions/audit_log_screen.dart';
 import '../transactions/riwayat_transaksi_screen.dart';
+import '../students/jenis_kas_screen.dart';
 
 /// Halaman pembayaran: daftar transaksi + filter periode/kelas + form bayar.
 class PaymentsScreen extends StatefulWidget {
@@ -90,43 +88,17 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             onSelected: (String value) {
               final NavigatorState nav = Navigator.of(context);
               switch (value) {
-                case 'tunggakan':
-                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const TunggakanScreen()));
-                case 'pengeluaran':
-                  nav.push<void>(
-                    MaterialPageRoute<void>(builder: (_) => const PengeluaranScreen()),
-                  );
                 case 'riwayat':
                   nav.push<void>(
                     MaterialPageRoute<void>(builder: (_) => const RiwayatTransaksiScreen()),
                   );
                 case 'laporan':
                   nav.push<void>(MaterialPageRoute<void>(builder: (_) => const LaporanScreen()));
-                case 'audit':
-                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const AuditLogScreen()));
+                case 'jenis':
+                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const JenisKasScreen()));
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'tunggakan',
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.pending_actions_rounded),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Tunggakan')),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'pengeluaran',
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.remove_circle_outline),
-                    SizedBox(width: 8),
-                    Expanded(child: Text('Pengeluaran')),
-                  ],
-                ),
-              ),
               const PopupMenuItem<String>(
                 value: 'riwayat',
                 child: Row(
@@ -148,12 +120,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
               ),
               const PopupMenuItem<String>(
-                value: 'audit',
+                value: 'jenis',
                 child: Row(
                   children: <Widget>[
-                    Icon(Icons.history_rounded),
+                    Icon(Icons.money_outlined),
                     SizedBox(width: 8),
-                    Expanded(child: Text('Audit Log')),
+                    Expanded(child: Text('Kelola Jenis Kas')),
                   ],
                 ),
               ),

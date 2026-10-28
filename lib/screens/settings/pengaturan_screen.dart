@@ -10,7 +10,6 @@ import '../../widgets/confirm_dialog.dart';
 import '../pengeluaran/pengeluaran_screen.dart';
 import '../payments/tunggakan_screen.dart';
 import '../transactions/audit_log_screen.dart';
-import '../transactions/riwayat_transaksi_screen.dart';
 import 'backup_restore_screen.dart';
 import 'profil_sekolah_screen.dart';
 import 'ubah_pin_screen.dart';
@@ -104,12 +103,6 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             title: 'Tunggakan',
             subtitle: 'Daftar siswa yang belum lunas',
             onTap: () => _push<void>(context, const TunggakanScreen()),
-          ),
-          _tile(
-            icon: Icons.receipt_long_outlined,
-            title: 'Riwayat Transaksi',
-            subtitle: 'Pemasukan & pengeluaran gabungan',
-            onTap: () => _push<void>(context, const RiwayatTransaksiScreen()),
           ),
           const SizedBox(height: 16),
           _label('LAINNYA'),

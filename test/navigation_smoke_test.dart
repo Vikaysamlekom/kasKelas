@@ -346,10 +346,10 @@ void main() {
       await cekTile(tester, 'Tunggakan', 'Tunggakan');
     });
 
-    smokeTest('Riwayat Transaksi', (WidgetTester tester) async {
+    smokeTest('Riwayat Transaksi tidak ada di Lainnya', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const PengaturanScreen()));
       await tick(tester);
-      await cekTile(tester, 'Riwayat Transaksi', 'Riwayat Transaksi');
+      expect(find.text('Riwayat Transaksi'), findsNothing);
     });
 
     smokeTest('Audit Log', (WidgetTester tester) async {
@@ -402,22 +402,16 @@ void main() {
       );
     }
 
-    smokeTest('Tunggakan', (WidgetTester tester) async {
-      await tester.pumpWidget(wrap(const PaymentsScreen()));
-      await tick(tester);
-      await cekMenu(tester, 'Tunggakan', 'Tunggakan');
-    });
-
-    smokeTest('Pengeluaran', (WidgetTester tester) async {
-      await tester.pumpWidget(wrap(const PaymentsScreen()));
-      await tick(tester);
-      await cekMenu(tester, 'Pengeluaran', 'Pengeluaran');
-    });
-
     smokeTest('Riwayat Transaksi', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const PaymentsScreen()));
       await tick(tester);
       await cekMenu(tester, 'Riwayat Transaksi', 'Riwayat Transaksi');
+    });
+
+    smokeTest('Kelola Jenis Kas', (WidgetTester tester) async {
+      await tester.pumpWidget(wrap(const PaymentsScreen()));
+      await tick(tester);
+      await cekMenu(tester, 'Kelola Jenis Kas', 'Jenis Kas');
     });
 
     smokeTest('Laporan', (WidgetTester tester) async {
@@ -426,10 +420,15 @@ void main() {
       await cekMenu(tester, 'Laporan', 'Laporan');
     });
 
-    smokeTest('Audit Log', (WidgetTester tester) async {
+    smokeTest('Popup hanya berisi Riwayat, Laporan, dan Jenis Kas', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const PaymentsScreen()));
       await tick(tester);
-      await cekMenu(tester, 'Audit Log', 'Audit Log');
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tick(tester);
+      expect(find.byType(PopupMenuItem<String>), findsNWidgets(3));
+      expect(find.text('Tunggakan'), findsNothing);
+      expect(find.text('Pengeluaran'), findsNothing);
+      expect(find.text('Audit Log'), findsNothing);
     });
 
     smokeTest('FAB "Buat Pembayaran" membuka form', (
@@ -481,10 +480,16 @@ void main() {
       await cekMenu(tester, 'Kelola Kelas & Jurusan', 'Kelas & Jurusan');
     });
 
-    smokeTest('Jenis Kas', (WidgetTester tester) async {
+    smokeTest('Popup hanya berisi Import, Export, dan Kelas & Jurusan', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const StudentsScreen()));
       await tick(tester);
-      await cekMenu(tester, 'Kelola Jenis Kas', 'Jenis Kas');
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tick(tester);
+      expect(find.byType(PopupMenuItem<String>), findsNWidgets(3));
+      expect(find.text('Import Siswa (CSV)'), findsOneWidget);
+      expect(find.text('Export Siswa (CSV)'), findsOneWidget);
+      expect(find.text('Kelola Kelas & Jurusan'), findsOneWidget);
+      expect(find.text('Kelola Jenis Kas'), findsNothing);
     });
 
     smokeTest('FAB "Tambah Siswa" membuka form', (
