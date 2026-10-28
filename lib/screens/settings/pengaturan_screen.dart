@@ -116,12 +116,13 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
           _tile(
             icon: Icons.info_outline_rounded,
             title: 'Tentang',
-            subtitle: 'Informasi aplikasi dan kelompok pengabdi',
+            subtitle: 'Informasi tentang aplikasi',
             onTap: () => _push<void>(context, const AboutUsScreen()),
           ),
           const SizedBox(height: 8),
           _tile(
             icon: Icons.logout_rounded,
+
             title: 'Keluar',
             subtitle: 'Keluar dari aplikasi',
             color: AppColors.danger,
