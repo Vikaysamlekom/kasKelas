@@ -7,6 +7,8 @@ import 'package:kas_bintang_nusantara/database/db_helper.dart';
 import 'package:kas_bintang_nusantara/models/expense_model.dart';
 import 'package:kas_bintang_nusantara/models/laporan_model.dart';
 import 'package:kas_bintang_nusantara/models/payment_model.dart';
+import 'package:kas_bintang_nusantara/models/payment_period.dart';
+import 'package:kas_bintang_nusantara/models/cash_type_model.dart';
 import 'package:kas_bintang_nusantara/models/student_model.dart';
 import 'package:kas_bintang_nusantara/repositories/auth_repository.dart';
 import 'package:kas_bintang_nusantara/repositories/dashboard_repository.dart';
@@ -76,13 +78,16 @@ void main() {
     final Database db = await DBHelper.instance.database;
     userId = (await db.query(DBHelper.tblUsers)).first['id'] as int;
 
-    kelasId = await DBHelper.instance.insert(DBHelper.tblClasses, <String, Object?>{
-      'name': 'XII RPL 1',
-      'level': 12,
-      'academic_year': '2026/2027',
-      'is_active': 1,
-      'created_at': now.toIso8601String(),
-    });
+    kelasId = await DBHelper.instance.insert(
+      DBHelper.tblClasses,
+      <String, Object?>{
+        'name': 'XII RPL 1',
+        'level': 12,
+        'academic_year': '2026/2027',
+        'is_active': 1,
+        'created_at': now.toIso8601String(),
+      },
+    );
 
     final StudentModel siswaBaru = await StudentRepository().insert(
       StudentModel(
@@ -122,7 +127,9 @@ void main() {
       final List<Map<String, Object?>> tabel = await DBHelper.instance.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
       );
-      final List<String> nama = tabel.map((Map<String, Object?> r) => r['name'] as String).toList();
+      final List<String> nama = tabel
+          .map((Map<String, Object?> r) => r['name'] as String)
+          .toList();
 
       for (final String wajib in <String>[
         DBHelper.tblUsers,
@@ -147,13 +154,19 @@ void main() {
     });
 
     test('jenis kas bulanan bawaan bernominal Rp10.000', () async {
-      final List<Map<String, Object?>> rows = await DBHelper.instance.query(DBHelper.tblCashTypes);
+      final List<Map<String, Object?>> rows = await DBHelper.instance.query(
+        DBHelper.tblCashTypes,
+      );
       expect(rows, hasLength(1));
       expect(rows.single['name'], 'Kas Bulanan');
       expect(rows.single['code'], 'BULANAN');
       expect(rows.single['frequency'], 'bulanan');
       for (final Map<String, Object?> r in rows) {
-        expect(r['amount'], 10000, reason: 'Nominal bawaan ${r['name']} harus Rp10.000');
+        expect(
+          r['amount'],
+          10000,
+          reason: 'Nominal bawaan ${r['name']} harus Rp10.000',
+        );
       }
       expect(
         await pembayaran.kasPerBulan(),
@@ -166,7 +179,9 @@ void main() {
       final List<Map<String, Object?>> idx = await DBHelper.instance.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'",
       );
-      final List<String> nama = idx.map((Map<String, Object?> r) => r['name'] as String).toList();
+      final List<String> nama = idx
+          .map((Map<String, Object?> r) => r['name'] as String)
+          .toList();
       expect(nama, contains('idx_payments_student'));
       expect(nama, contains('idx_payments_period'));
       expect(nama, contains('idx_students_class_name'));
@@ -174,9 +189,8 @@ void main() {
     });
 
     test('foreign key aktif', () async {
-      final List<Map<String, Object?>> pragma = await DBHelper.instance.rawQuery(
-        'PRAGMA foreign_keys',
-      );
+      final List<Map<String, Object?>> pragma = await DBHelper.instance
+          .rawQuery('PRAGMA foreign_keys');
       expect(pragma.first.values.first, 1);
     });
   });
@@ -251,11 +265,15 @@ void main() {
           updatedAt: now,
         ),
       );
-      final List<StudentModel> hasil = await siswa.list(const StudentFilter(search: 'bella'));
+      final List<StudentModel> hasil = await siswa.list(
+        const StudentFilter(search: 'bella'),
+      );
       expect(hasil.length, 1);
       expect(hasil.first.name, 'Bella Putri');
 
-      final List<StudentModel> perKelas = await siswa.list(StudentFilter(classId: kelasId));
+      final List<StudentModel> perKelas = await siswa.list(
+        StudentFilter(classId: kelasId),
+      );
       expect(perKelas.length, 2);
     });
 
@@ -296,8 +314,14 @@ void main() {
         recordedBy: userId,
       );
 
-      expect(pertama.paymentCode, 'TRX-${now.year}${now.month.toString().padLeft(2, '0')}-000001');
-      expect(kedua.paymentCode, 'TRX-${now.year}${now.month.toString().padLeft(2, '0')}-000002');
+      expect(
+        pertama.paymentCode,
+        'TRX-${now.year}${now.month.toString().padLeft(2, '0')}-000001',
+      );
+      expect(
+        kedua.paymentCode,
+        'TRX-${now.year}${now.month.toString().padLeft(2, '0')}-000002',
+      );
       expect(pertama.status, PaymentStatus.lunas);
       expect(kedua.status, PaymentStatus.sebagian);
     });
@@ -403,11 +427,12 @@ void main() {
 
       // Tunggakan juga per jenis kas: kas sosial belum dibayar → muncul
       // dengan sisa 10.000, bukan total gabungan.
-      final List<TunggakanItem> tunggakanSosial = await pembayaran.listTunggakan(
-        month: now.month,
-        year: now.year,
-        cashTypeId: kasSosialId,
-      );
+      final List<TunggakanItem> tunggakanSosial = await pembayaran
+          .listTunggakan(
+            month: now.month,
+            year: now.year,
+            cashTypeId: kasSosialId,
+          );
       expect(tunggakanSosial.length, 1);
       expect(tunggakanSosial.first.studentId, siswaId);
       expect(tunggakanSosial.first.owed, 10000);
@@ -461,6 +486,59 @@ void main() {
       expect(statusBesok.paid, 0);
       expect(statusBesok.sisa, 5000);
       expect(statusBesok.status, PaymentStatus.belum);
+    });
+
+    test('kas mingguan dihitung dan dibayar per minggu', () async {
+      final int kasMingguanId = await DBHelper.instance.insert(
+        DBHelper.tblCashTypes,
+        <String, Object?>{
+          'name': 'Kas Mingguan',
+          'code': 'MINGGUAN',
+          'amount': 5000,
+          'frequency': PaymentFrequency.mingguan,
+          'due_day': 10,
+          'is_active': 1,
+          'created_at': now.toIso8601String(),
+        },
+      );
+      final DateTime awalMinggu = DateTime(2026, 3, 2);
+      final PaymentPeriod mingguPertama = PaymentPeriod.forDate(
+        awalMinggu,
+        PaymentFrequency.mingguan,
+      );
+      final PaymentPeriod mingguKedua = PaymentPeriod.forDate(
+        awalMinggu.add(const Duration(days: 7)),
+        PaymentFrequency.mingguan,
+      );
+
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasMingguanId,
+        amount: 5000,
+        month: mingguPertama.start.month,
+        year: mingguPertama.start.year,
+        paidDate: awalMinggu.toIso8601String(),
+        periodStart: mingguPertama.start,
+        periodEnd: mingguPertama.end,
+        recordedBy: userId,
+      );
+
+      final dynamic statusMingguPertama = await pembayaran.periodStatus(
+        siswaId,
+        cashTypeId: kasMingguanId,
+        period: mingguPertama,
+      );
+      final dynamic statusMingguKedua = await pembayaran.periodStatus(
+        siswaId,
+        cashTypeId: kasMingguanId,
+        period: mingguKedua,
+      );
+      expect(statusMingguPertama.owed, 5000);
+      expect(statusMingguPertama.paid, 5000);
+      expect(statusMingguPertama.status, PaymentStatus.lunas);
+      expect(statusMingguKedua.owed, 5000);
+      expect(statusMingguKedua.paid, 0);
+      expect(statusMingguKedua.status, PaymentStatus.belum);
     });
 
     test('kode transaksi tidak bentrok setelah pembatalan', () async {
@@ -739,7 +817,12 @@ void main() {
   group('Integritas data', () {
     test('hapus siswa cascade menghapus pembayarannya', () async {
       final StudentModel s = await siswa.insert(
-        StudentModel(nis: '2001', name: 'Siswa Sementara', createdAt: now, updatedAt: now),
+        StudentModel(
+          nis: '2001',
+          name: 'Siswa Sementara',
+          createdAt: now,
+          updatedAt: now,
+        ),
       );
       await pembayaran.add(
         studentId: s.id!,

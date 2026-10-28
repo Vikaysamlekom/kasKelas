@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/payment_model.dart';
+import '../../models/payment_period.dart';
 import '../../providers/classes_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/session_provider.dart';
@@ -40,8 +41,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Future<void> _openForm() async {
     await context.read<PaymentProvider>().loadActiveStudents();
     if (!mounted) return;
-    final bool? changed = await Navigator.of(context)
-        .push<bool>(MaterialPageRoute<bool>(builder: (_) => const PaymentFormScreen()));
+    final bool? changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const PaymentFormScreen()),
+    );
     if (changed == true && mounted) {
       context.read<PaymentProvider>().load();
     }
@@ -49,7 +51,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   Future<void> _openBukti(PaymentModel payment) async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => BuktiPembayaranScreen(paymentId: payment.id!)),
+      MaterialPageRoute<void>(
+        builder: (_) => BuktiPembayaranScreen(paymentId: payment.id!),
+      ),
     );
     if (mounted) {
       context.read<PaymentProvider>().load();
@@ -60,7 +64,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final bool confirm = await showConfirmDialog(
       context,
       title: 'Hapus Pembayaran',
-      message: 'Hapus transaksi ${payment.paymentCode}?\nData tidak bisa dikembalikan.',
+      message:
+          'Hapus transaksi ${payment.paymentCode}?\nData tidak bisa dikembalikan.',
       confirmLabel: 'Ya, Hapus',
     );
     if (!confirm) return;
@@ -69,7 +74,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final int? userId = context.read<SessionProvider>().user?.id;
     await jalankanAksi(
       context,
-      () => context.read<PaymentProvider>().deletePayment(payment.id!, userId: userId),
+      () => context.read<PaymentProvider>().deletePayment(
+        payment.id!,
+        userId: userId,
+      ),
       konteks: 'Hapus pembayaran',
     );
   }
@@ -90,12 +98,22 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               switch (value) {
                 case 'riwayat':
                   nav.push<void>(
-                    MaterialPageRoute<void>(builder: (_) => const RiwayatTransaksiScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const RiwayatTransaksiScreen(),
+                    ),
                   );
                 case 'laporan':
-                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const LaporanScreen()));
+                  nav.push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LaporanScreen(),
+                    ),
+                  );
                 case 'jenis':
-                  nav.push<void>(MaterialPageRoute<void>(builder: (_) => const JenisKasScreen()));
+                  nav.push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const JenisKasScreen(),
+                    ),
+                  );
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -191,7 +209,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           const SizedBox(height: 4),
                           Text(
                             Formatters.rupiah(provider.totalPenerimaan),
-                            style: AppText.amountMedium.copyWith(color: AppColors.navy),
+                            style: AppText.amountMedium.copyWith(
+                              color: AppColors.navy,
+                            ),
                           ),
                         ],
                       ),
@@ -206,7 +226,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           const SizedBox(height: 4),
                           Text(
                             '${provider.payments.length}',
-                            style: AppText.amountMedium.copyWith(color: AppColors.navy),
+                            style: AppText.amountMedium.copyWith(
+                              color: AppColors.navy,
+                            ),
                           ),
                         ],
                       ),
@@ -252,7 +274,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   static final List<(String, int)> _years = _buildYears();
 
   static List<(String, int)> _buildYears() {
-    return <(String, int)>[for (final int y in AppDateRange.semuaTahun) (y.toString(), y)];
+    return <(String, int)>[
+      for (final int y in AppDateRange.semuaTahun) (y.toString(), y),
+    ];
   }
 }
 
@@ -290,7 +314,11 @@ class _PaymentList extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (BuildContext context, int index) {
           final PaymentModel p = payments[index];
-          return _PaymentTile(payment: p, onTap: () => onTap(p), onDelete: () => onDelete(p));
+          return _PaymentTile(
+            payment: p,
+            onTap: () => onTap(p),
+            onDelete: () => onDelete(p),
+          );
         },
       ),
     );
@@ -302,7 +330,11 @@ class _PaymentTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _PaymentTile({required this.payment, required this.onTap, required this.onDelete});
+  const _PaymentTile({
+    required this.payment,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +351,11 @@ class _PaymentTile extends StatelessWidget {
               color: AppColors.blue.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.payments_rounded, color: AppColors.blue, size: 22),
+            child: const Icon(
+              Icons.payments_rounded,
+              color: AppColors.blue,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -342,7 +378,7 @@ class _PaymentTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${Formatters.namaBulan(payment.month)} ${payment.year} · '
+                  '${PaymentPeriod.label(frequency: payment.cashTypeFrequency ?? 'bulanan', start: payment.periodStart, end: payment.periodEnd, fallbackMonth: payment.month, fallbackYear: payment.year)} · '
                   '${Formatters.tanggalPendekIso(payment.paidDate)}',
                   style: AppText.caption.copyWith(color: AppColors.textMuted),
                   maxLines: 1,
@@ -357,7 +393,10 @@ class _PaymentTile extends StatelessWidget {
             children: <Widget>[
               Text(
                 Formatters.rupiah(payment.amount),
-                style: AppText.body.copyWith(fontWeight: FontWeight.w800, color: AppColors.navy),
+                style: AppText.body.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.navy,
+                ),
               ),
               const SizedBox(height: 6),
               Row(

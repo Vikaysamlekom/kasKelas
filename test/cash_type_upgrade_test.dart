@@ -53,7 +53,10 @@ void main() {
           await db.execute('''
           CREATE TABLE payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cash_type_id INTEGER NOT NULL
+            cash_type_id INTEGER NOT NULL,
+            month INTEGER NOT NULL DEFAULT 1,
+            year INTEGER NOT NULL DEFAULT 2026,
+            paid_date TEXT NOT NULL DEFAULT '2026-01-01'
           )
         ''');
 
@@ -170,7 +173,10 @@ void main() {
           await db.execute('''
           CREATE TABLE payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cash_type_id INTEGER NOT NULL
+            cash_type_id INTEGER NOT NULL,
+            month INTEGER NOT NULL DEFAULT 1,
+            year INTEGER NOT NULL DEFAULT 2026,
+            paid_date TEXT NOT NULL DEFAULT '2026-01-01'
           )
         ''');
 

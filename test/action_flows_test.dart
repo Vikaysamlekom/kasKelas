@@ -193,7 +193,11 @@ void main() {
       await ketuk(tester, find.text('Simpan'));
       await tick(tester);
 
-      expect(p.panggil, isTrue, reason: 'Tombol Simpan tidak memanggil provider');
+      expect(
+        p.panggil,
+        isTrue,
+        reason: 'Tombol Simpan tidak memanggil provider',
+      );
       expect(p.nama, 'Kas Praktikum');
       expect(p.kode, 'PRAKTIK');
       expect(p.nominal, 75000);
@@ -218,7 +222,9 @@ void main() {
     smokeTest('gagal simpan: tombol NYALA lagi (tidak macet)', (
       WidgetTester tester,
     ) async {
-      final _GagalCashTypes p = _GagalCashTypes(cashTypeRepository: CashTypeRepository());
+      final _GagalCashTypes p = _GagalCashTypes(
+        cashTypeRepository: CashTypeRepository(),
+      );
       await tester.pumpWidget(
         MultiProvider(
           providers: <SingleChildWidget>[
@@ -325,11 +331,7 @@ void main() {
       await tick(tester);
 
       expect(p.panggilKategori, isTrue);
-      expectTombolAktif(
-        tester,
-        tombol('Simpan Kategori'),
-        'Simpan Kategori',
-      );
+      expectTombolAktif(tester, tombol('Simpan Kategori'), 'Simpan Kategori');
     });
   });
 
@@ -596,7 +598,9 @@ class _GagalCashTypes extends CashTypesProvider {
     int? userId,
   }) async {
     panggil = true;
-    throw AppException('Data sudah ada (nilai duplikat). Periksa kembali input Anda.');
+    throw AppException(
+      'Data sudah ada (nilai duplikat). Periksa kembali input Anda.',
+    );
   }
 }
 
@@ -618,6 +622,8 @@ class _RekamPayments extends PaymentProvider {
     required int month,
     required int year,
     required String paidDate,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     String paymentMethod = 'tunai',
     String? note,
     int? userId,
@@ -656,6 +662,8 @@ class _GagalPembayaran extends PaymentProvider {
     required int month,
     required int year,
     required String paidDate,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     String paymentMethod = 'tunai',
     String? note,
     int? userId,
@@ -732,7 +740,9 @@ class _GagalKategori extends TransactionProvider {
     int? userId,
   }) async {
     panggilKategori = true;
-    throw AppException('Data sudah ada (nilai duplikat). Periksa kembali input Anda.');
+    throw AppException(
+      'Data sudah ada (nilai duplikat). Periksa kembali input Anda.',
+    );
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/cash_type_model.dart';
 import '../models/payment_model.dart';
+import '../models/payment_period.dart';
 
 /// Status pembayaran satu siswa pada satu periode (bulan + tahun) untuk
 /// SATU jenis kas yang sedang dipilih. Kewajiban (owed) = nominal dari
@@ -86,6 +87,8 @@ class PaymentRepository {
     required int month,
     required int year,
     required String paidDate,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     String paymentMethod = 'tunai',
     String? note,
     int? recordedBy,
@@ -98,10 +101,22 @@ class PaymentRepository {
       throw StateError('Jenis kas tidak ditemukan.');
     }
     // Status: lunas bila nominal >= jumlah jenis kas, selain itu sebagian.
-    final String status = amount >= cashType.amount ? PaymentStatus.lunas : PaymentStatus.sebagian;
+    final String status = amount >= cashType.amount
+        ? PaymentStatus.lunas
+        : PaymentStatus.sebagian;
 
     final String code = await nextPaymentCode(year, month);
     final String now = DateTime.now().toIso8601String();
+    final PaymentPeriod period = PaymentPeriod.forDate(
+      periodStart ?? DateTime.parse(paidDate),
+      cashType.frequency,
+    );
+    final String? periodStartKey = cashType.frequency == PaymentFrequency.sekali
+        ? null
+        : PaymentPeriod.dateKey(periodStart ?? period.start);
+    final String? periodEndKey = cashType.frequency == PaymentFrequency.sekali
+        ? null
+        : PaymentPeriod.dateKey(periodEnd ?? period.end);
     final int id = await _db.insert(DBHelper.tblPayments, <String, Object?>{
       'payment_code': code,
       'student_id': studentId,
@@ -109,6 +124,8 @@ class PaymentRepository {
       'amount': amount,
       'month': month,
       'year': year,
+      'period_start': periodStartKey,
+      'period_end': periodEndKey,
       'paid_date': paidDate,
       'payment_method': paymentMethod,
       'status': status,
@@ -144,6 +161,7 @@ class PaymentRepository {
     final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT p.*, s.name AS student_name, s.nis AS student_nis,
              c.name AS class_name, ct.name AS cash_type_name,
+             ct.frequency AS cash_type_frequency,
              u.full_name AS officer_name
       FROM ${DBHelper.tblPayments} p
       JOIN ${DBHelper.tblStudents} s ON s.id = p.student_id
@@ -162,6 +180,7 @@ class PaymentRepository {
       '''
       SELECT p.*, s.name AS student_name, s.nis AS student_nis,
              c.name AS class_name, ct.name AS cash_type_name,
+             ct.frequency AS cash_type_frequency,
              u.full_name AS officer_name
       FROM ${DBHelper.tblPayments} p
       JOIN ${DBHelper.tblStudents} s ON s.id = p.student_id
@@ -179,7 +198,11 @@ class PaymentRepository {
 
   /// Hapus permanen satu transaksi pembayaran.
   Future<void> delete(int id) async {
-    await _db.delete(DBHelper.tblPayments, where: 'id = ?', whereArgs: <Object?>[id]);
+    await _db.delete(
+      DBHelper.tblPayments,
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
+    );
   }
 
   /// Batalkan (void) pembayaran → status batal + alasan wajib.
@@ -252,7 +275,9 @@ class PaymentRepository {
           final Set<String> weeks = <String>{};
           DateTime cursor = start;
           while (!cursor.isAfter(end)) {
-            final DateTime weekStart = cursor.subtract(Duration(days: cursor.weekday - 1));
+            final DateTime weekStart = cursor.subtract(
+              Duration(days: cursor.weekday - 1),
+            );
             weeks.add('${weekStart.year}-${weekStart.month}-${weekStart.day}');
             cursor = cursor.add(const Duration(days: 7));
           }
@@ -264,7 +289,9 @@ class PaymentRepository {
           DateTime cursor = DateTime(start.year, start.month, 1);
           final DateTime limit = DateTime(end.year, end.month, 1);
           while (!cursor.isAfter(limit)) {
-            months.add('${cursor.year}-${cursor.month.toString().padLeft(2, '0')}');
+            months.add(
+              '${cursor.year}-${cursor.month.toString().padLeft(2, '0')}',
+            );
             cursor = DateTime(cursor.year, cursor.month + 1, 1);
           }
           return months.length;
@@ -309,22 +336,44 @@ class PaymentRepository {
     DateTime? paidDate,
   }) async {
     final CashTypeModel? cashType = await getCashType(cashTypeId);
-    final int owed = cashType?.amount ?? 0;
-    final bool isDaily = cashType?.frequency == PaymentFrequency.harian;
-    final String dateKey = paidDate == null
+    if (cashType == null) {
+      throw StateError('Jenis kas tidak ditemukan.');
+    }
+    return periodStatus(
+      studentId,
+      cashTypeId: cashTypeId,
+      period: PaymentPeriod.forDate(
+        paidDate ?? DateTime(year, month),
+        cashType.frequency,
+      ),
+    );
+  }
+
+  Future<PeriodStatus> periodStatus(
+    int studentId, {
+    required int cashTypeId,
+    required PaymentPeriod period,
+  }) async {
+    final CashTypeModel? cashType = await getCashType(cashTypeId);
+    if (cashType == null) {
+      throw StateError('Jenis kas tidak ditemukan.');
+    }
+    final int owed = cashType.amount;
+    final bool isOneTime = cashType.frequency == PaymentFrequency.sekali;
+    final String periodFilter = isOneTime
         ? ''
-        : '${paidDate.year.toString().padLeft(4, '0')}-'
-              '${paidDate.month.toString().padLeft(2, '0')}-'
-              '${paidDate.day.toString().padLeft(2, '0')}';
-    final String periodFilter = isDaily && paidDate != null
-        ? 'substr(paid_date, 1, 10) = ?'
-        : 'month = ? AND year = ?';
-    final List<Object?> args = isDaily && paidDate != null
-        ? <Object?>[studentId, cashTypeId, dateKey]
-        : <Object?>[studentId, cashTypeId, month, year];
+        : 'AND period_start = ? AND period_end = ?';
+    final List<Object?> args = <Object?>[
+      studentId,
+      cashTypeId,
+      if (!isOneTime) ...<Object?>[
+        PaymentPeriod.dateKey(period.start),
+        PaymentPeriod.dateKey(period.end),
+      ],
+    ];
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS s FROM ${DBHelper.tblPayments} '
-      'WHERE student_id = ? AND cash_type_id = ? AND $periodFilter '
+      'WHERE student_id = ? AND cash_type_id = ? $periodFilter '
       "AND status != '${PaymentStatus.batal}'",
       args,
     );
@@ -338,11 +387,16 @@ class PaymentRepository {
   Future<List<TunggakanItem>> listTunggakan({
     int? month,
     int? year,
+    DateTime? periodStart,
+    DateTime? periodEnd,
     int? classId,
     int? majorId,
     int? cashTypeId,
   }) async {
-    final List<String> where = <String>['s.is_active = 1', "s.status = 'aktif'"];
+    final List<String> where = <String>[
+      's.is_active = 1',
+      "s.status = 'aktif'",
+    ];
     final List<Object?> args = <Object?>[];
     if (classId != null) {
       where.add('s.class_id = ?');
@@ -352,10 +406,24 @@ class PaymentRepository {
       where.add('COALESCE(s.major_id, c.major_id) = ?');
       args.add(majorId);
     }
-    // Kewajiban pada daftar tunggakan tetap mengacu pada satu tagihan per
-    // periode yang dipilih, bukan total semua hari/minggu/semester di rentang.
-    final CashTypeModel? cashType = cashTypeId == null ? null : await getCashType(cashTypeId);
+    final CashTypeModel? cashType = cashTypeId == null
+        ? null
+        : await getCashType(cashTypeId);
     final int owed = cashType?.amount ?? 0;
+    final bool isOneTime = cashType?.frequency == PaymentFrequency.sekali;
+    final String paymentPeriodFilter = isOneTime
+        ? ''
+        : periodStart != null && periodEnd != null
+        ? 'AND p.period_start = ? AND p.period_end = ?'
+        : 'AND p.month = ? AND p.year = ?';
+    final List<Object?> paymentPeriodArgs = isOneTime
+        ? <Object?>[]
+        : periodStart != null && periodEnd != null
+        ? <Object?>[
+            PaymentPeriod.dateKey(periodStart),
+            PaymentPeriod.dateKey(periodEnd),
+          ]
+        : <Object?>[month, year];
 
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       '''
@@ -366,14 +434,14 @@ class PaymentRepository {
       LEFT JOIN ${DBHelper.tblClasses} c ON c.id = s.class_id
       LEFT JOIN ${DBHelper.tblMajors} m ON m.id = COALESCE(s.major_id, c.major_id)
       LEFT JOIN ${DBHelper.tblPayments} p ON p.student_id = s.id
-        AND p.month = ? AND p.year = ?
+        $paymentPeriodFilter
         AND p.cash_type_id = ?
         AND p.status != '${PaymentStatus.batal}'
       WHERE ${where.join(' AND ')}
       GROUP BY s.id
       ORDER BY c.level ASC, c.name ASC, s.name ASC
       ''',
-      <Object?>[month, year, cashTypeId, ...args],
+      <Object?>[...paymentPeriodArgs, cashTypeId, ...args],
     );
 
     return rows.map((Map<String, Object?> r) {

@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/payment_model.dart';
+import '../../models/payment_period.dart';
 import '../../models/school_profile_model.dart';
 import '../../providers/payment_provider.dart';
 import '../../repositories/school_profile_repo.dart';
@@ -53,11 +54,13 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
   /// Generate bytes PDF bukti pembayaran (menggunakan profil sekolah).
   Future<Uint8List> _buildPdf() async {
     final PaymentModel p = _payment!;
-    final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
+    final SchoolProfileModel? profil = await SchoolProfileRepository()
+        .getProfile();
     return PdfService.receipt(
       p,
       namaSekolah: profil?.schoolName,
-      namaBendahara: (profil?.treasurer != null && profil!.treasurer!.isNotEmpty)
+      namaBendahara:
+          (profil?.treasurer != null && profil!.treasurer!.isNotEmpty)
           ? profil.treasurer
           : p.officerName,
     );
@@ -86,7 +89,9 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
       if (!await folder.exists()) {
         await folder.create(recursive: true);
       }
-      final File file = File('${folder.path}/${PdfService.fileName(_payment!)}');
+      final File file = File(
+        '${folder.path}/${PdfService.fileName(_payment!)}',
+      );
       await file.writeAsBytes(bytes, flush: true);
       if (mounted) {
         _snack('PDF tersimpan:\n${file.path}');
@@ -120,7 +125,8 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -146,7 +152,16 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
       ('NIS', p.studentNis ?? '-'),
       ('Kelas', p.className ?? '-'),
       ('Jenis Kas', p.cashTypeName ?? '-'),
-      ('Periode', '${Formatters.namaBulan(p.month)} ${p.year}'),
+      (
+        'Periode',
+        PaymentPeriod.label(
+          frequency: p.cashTypeFrequency ?? 'bulanan',
+          start: p.periodStart,
+          end: p.periodEnd,
+          fallbackMonth: p.month,
+          fallbackYear: p.year,
+        ),
+      ),
       ('Nominal', Formatters.rupiah(p.amount)),
       ('Status', PaymentStatus.label(p.status)),
       ('Tanggal', Formatters.tanggalIso(p.paidDate)),
@@ -168,11 +183,18 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
               ),
               child: Column(
                 children: <Widget>[
-                  const Icon(Icons.school_rounded, color: AppColors.orange, size: 40),
+                  const Icon(
+                    Icons.school_rounded,
+                    color: AppColors.orange,
+                    size: 40,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'SMK BINTANG NUSANTARA',
-                    style: AppText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
+                    style: AppText.sectionTitle.copyWith(
+                      color: Colors.white,
+                      fontSize: 17,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -185,14 +207,20 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       p.paymentCode,
-                      style: AppText.label.copyWith(color: Colors.white, fontSize: 12),
+                      style: AppText.label.copyWith(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -232,7 +260,10 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
           right: 16,
           bottom: 16,
           child: _processing
-              ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
+              ? const SizedBox(
+                  height: 52,
+                  child: Center(child: CircularProgressIndicator()),
+                )
               : Row(
                   children: <Widget>[
                     Expanded(
@@ -269,7 +300,9 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        border: last ? null : const Border(bottom: BorderSide(color: AppColors.divider)),
+        border: last
+            ? null
+            : const Border(bottom: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -10,7 +10,7 @@ class AppConstants {
 
   // Nama & versi database
   static const String dbName = 'kas_bintang_nusantara.db';
-  static const int dbVersion = 7;
+  static const int dbVersion = 8;
 
   // Kredensial default bendahara (dibuat otomatis saat DB pertama kali dibuat)
   static const String defaultUsername = 'bendahara';
@@ -67,10 +67,16 @@ class AppDateRange {
   /// Mengandung semua tahun dari [minYear] sampai [maxYear] supaya tahun
   /// jauh ke depan (sampai 2100) tetap bisa dipilih, bukan hanya beberapa
   /// tahun ke depan dari sekarang.
-  static List<int> get semuaTahun => <int>[for (int y = minYear; y <= maxYear; y++) y];
+  static List<int> get semuaTahun => <int>[
+    for (int y = minYear; y <= maxYear; y++) y,
+  ];
 
   /// Tahun sekitar [anchor] untuk mengisi awal dropdown (tahun berjalan).
-  static List<int> tahunSekitar(int anchor, {int sebelum = 5, int sesudah = 1}) {
+  static List<int> tahunSekitar(
+    int anchor, {
+    int sebelum = 5,
+    int sesudah = 1,
+  }) {
     return <int>[
       for (int y = anchor - sebelum; y <= anchor + sesudah; y++)
         if (y >= minYear && y <= maxYear) y,

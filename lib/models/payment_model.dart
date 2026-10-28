@@ -7,6 +7,8 @@ class PaymentModel {
   final int amount;
   final int month;
   final int year;
+  final String? periodStart;
+  final String? periodEnd;
   final String paidDate;
   final String paymentMethod; // tunai / transfer / qris
   final String status; // lunas / pending / sebagian
@@ -20,6 +22,7 @@ class PaymentModel {
   final String? studentName;
   final String? studentNis;
   final String? cashTypeName;
+  final String? cashTypeFrequency;
   final String? className;
   final String? officerName;
 
@@ -31,6 +34,8 @@ class PaymentModel {
     this.amount = 0,
     required this.month,
     required this.year,
+    this.periodStart,
+    this.periodEnd,
     required this.paidDate,
     this.paymentMethod = 'tunai',
     this.status = 'lunas',
@@ -42,6 +47,7 @@ class PaymentModel {
     this.studentName,
     this.studentNis,
     this.cashTypeName,
+    this.cashTypeFrequency,
     this.className,
     this.officerName,
   });
@@ -55,6 +61,8 @@ class PaymentModel {
       amount: map['amount'] as int? ?? 0,
       month: map['month'] as int,
       year: map['year'] as int,
+      periodStart: map['period_start'] as String?,
+      periodEnd: map['period_end'] as String?,
       paidDate: map['paid_date'] as String,
       paymentMethod: (map['payment_method'] as String?) ?? 'tunai',
       status: (map['status'] as String?) ?? 'lunas',
@@ -66,6 +74,7 @@ class PaymentModel {
       studentName: map['student_name'] as String?,
       studentNis: map['student_nis'] as String?,
       cashTypeName: map['cash_type_name'] as String?,
+      cashTypeFrequency: map['cash_type_frequency'] as String?,
       className: map['class_name'] as String?,
       officerName: map['officer_name'] as String?,
     );
@@ -80,6 +89,8 @@ class PaymentModel {
       'amount': amount,
       'month': month,
       'year': year,
+      'period_start': periodStart,
+      'period_end': periodEnd,
       'paid_date': paidDate,
       'payment_method': paymentMethod,
       'status': status,

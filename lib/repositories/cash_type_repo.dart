@@ -14,6 +14,16 @@ class CashTypeRepository {
     return rows.map(CashTypeModel.fromMap).toList();
   }
 
+  Future<CashTypeModel?> getById(int id) async {
+    final List<Map<String, Object?>> rows = await _db.query(
+      DBHelper.tblCashTypes,
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : CashTypeModel.fromMap(rows.first);
+  }
+
   Future<CashTypeModel> save({
     int? id,
     required String name,
@@ -25,16 +35,19 @@ class CashTypeRepository {
   }) async {
     final String now = DateTime.now().toIso8601String();
     if (id == null) {
-      final int newId = await _db.insert(DBHelper.tblCashTypes, <String, Object?>{
-        'name': name.trim(),
-        'code': code.trim().toUpperCase(),
-        'amount': amount,
-        'frequency': frequency,
-        'due_day': dueDay,
-        'description': description,
-        'is_active': 1,
-        'created_at': now,
-      });
+      final int newId = await _db.insert(
+        DBHelper.tblCashTypes,
+        <String, Object?>{
+          'name': name.trim(),
+          'code': code.trim().toUpperCase(),
+          'amount': amount,
+          'frequency': frequency,
+          'due_day': dueDay,
+          'description': description,
+          'is_active': 1,
+          'created_at': now,
+        },
+      );
       return CashTypeModel(
         id: newId,
         name: name.trim(),
@@ -88,7 +101,11 @@ class CashTypeRepository {
       );
       return DeleteResult.fromUpdate(updated);
     }
-    await _db.delete(DBHelper.tblCashTypes, where: 'id = ?', whereArgs: <Object?>[id]);
+    await _db.delete(
+      DBHelper.tblCashTypes,
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
+    );
     return const DeleteResult.deleted();
   }
 
