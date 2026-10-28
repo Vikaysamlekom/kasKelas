@@ -360,14 +360,6 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
               ],
             ),
           ),
