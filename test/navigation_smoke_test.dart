@@ -1,8 +1,8 @@
 import 'dart:io';
 
-
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';import 'package:kas_bintang_nusantara/core/theme.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:kas_bintang_nusantara/core/theme.dart';
 import 'package:kas_bintang_nusantara/database/db_helper.dart';
 import 'package:kas_bintang_nusantara/models/school_profile_model.dart';
 import 'package:kas_bintang_nusantara/models/student_model.dart';
@@ -27,6 +27,7 @@ import 'package:kas_bintang_nusantara/screens/dashboard/dashboard_screen.dart';
 import 'package:kas_bintang_nusantara/screens/payments/payments_screen.dart';
 import 'package:kas_bintang_nusantara/screens/payments/tunggakan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/pengeluaran/pengeluaran_screen.dart';
+import 'package:kas_bintang_nusantara/screens/settings/about_us_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/pengaturan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/students/jenis_kas_screen.dart';
 import 'package:kas_bintang_nusantara/screens/students/kelas_screen.dart';
@@ -98,7 +99,8 @@ void main() {
     await DBHelper.instance.database;
 
     final now = DateTime.now();
-    final String hariIni = '${now.year.toString().padLeft(4, '0')}-'
+    final String hariIni =
+        '${now.year.toString().padLeft(4, '0')}-'
         '${now.month.toString().padLeft(2, '0')}-'
         '${now.day.toString().padLeft(2, '0')}';
 
@@ -221,7 +223,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 450));
   }
 
-
   /// Tester標準 dengan drain timer otomatis di akhir test.
   void smokeTest(String nama, Future<void> Function(WidgetTester) body) {
     testWidgets(nama, (WidgetTester tester) async {
@@ -268,9 +269,7 @@ void main() {
         ),
       ),
     );
-    await tester.pumpWidget(
-      wrap(const Scaffold(body: DashboardScreen())),
-    );
+    await tester.pumpWidget(wrap(const Scaffold(body: DashboardScreen())));
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 100)),
     );
@@ -294,7 +293,11 @@ void main() {
   /// Layar pengaturan panjang dan viewport test hanya 800x600, jadi sebagian
   /// tile berada di luar area terlihat.
   Future<void> ketukTerlihat(WidgetTester tester, Finder f) async {
-    await tester.scrollUntilVisible(f, 120, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      f,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pump();
     await tester.ensureVisible(f);
     await tester.pump();
@@ -346,7 +349,9 @@ void main() {
       await cekTile(tester, 'Tunggakan', 'Tunggakan');
     });
 
-    smokeTest('Riwayat Transaksi tidak ada di Lainnya', (WidgetTester tester) async {
+    smokeTest('Riwayat Transaksi tidak ada di Lainnya', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(wrap(const PengaturanScreen()));
       await tick(tester);
       expect(find.text('Riwayat Transaksi'), findsNothing);
@@ -356,6 +361,36 @@ void main() {
       await tester.pumpWidget(wrap(const PengaturanScreen()));
       await tick(tester);
       await cekTile(tester, 'Audit Log', 'Audit Log');
+    });
+
+    smokeTest('Tentang menampilkan informasi aplikasi dan kelompok pengabdi', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(wrap(const PengaturanScreen()));
+      await tick(tester);
+      await cekTile(tester, 'Tentang', 'INFORMASI APLIKASI');
+      expect(find.byType(AboutUsScreen), findsOneWidget);
+      expect(find.text('Kas Bintang Nusantara'), findsWidgets);
+      expect(find.text('1.0.7'), findsOneWidget);
+      expect(find.text('Universitas Pamulang'), findsOneWidget);
+      expect(
+        find.text('Kelompok pengabdian kepada masyarakat'),
+        findsOneWidget,
+      );
+      for (final String nama in <String>[
+        'Achmad Refaldi Peto',
+        'Agustina Febriyanti',
+        'Aprizal Dwi Lutfiansah',
+        'Evan Hardyansyah',
+        'Muhamad Reinaldi Putra Ramadhani',
+        'Muhammad Susilo',
+        'Phundut Bagas Wazidan',
+        'Rangga Waridat',
+        'Usep Saeful Adzkia',
+        'Vickry Dwi Prasetyanto',
+      ]) {
+        expect(find.text(nama), findsOneWidget);
+      }
     });
 
     smokeTest('Logout memunculkan dialog konfirmasi', (
@@ -420,7 +455,9 @@ void main() {
       await cekMenu(tester, 'Laporan', 'Laporan');
     });
 
-    smokeTest('Popup hanya berisi Riwayat, Laporan, dan Jenis Kas', (WidgetTester tester) async {
+    smokeTest('Popup hanya berisi Riwayat, Laporan, dan Jenis Kas', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(wrap(const PaymentsScreen()));
       await tick(tester);
       await tester.tap(find.byType(PopupMenuButton<String>).first);
@@ -480,7 +517,9 @@ void main() {
       await cekMenu(tester, 'Kelola Kelas & Jurusan', 'Kelas & Jurusan');
     });
 
-    smokeTest('Popup hanya berisi Import, Export, dan Kelas & Jurusan', (WidgetTester tester) async {
+    smokeTest('Popup hanya berisi Import, Export, dan Kelas & Jurusan', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(wrap(const StudentsScreen()));
       await tick(tester);
       await tester.tap(find.byType(PopupMenuButton<String>).first);
@@ -492,9 +531,7 @@ void main() {
       expect(find.text('Kelola Jenis Kas'), findsNothing);
     });
 
-    smokeTest('FAB "Tambah Siswa" membuka form', (
-      WidgetTester tester,
-    ) async {
+    smokeTest('FAB "Tambah Siswa" membuka form', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const StudentsScreen()));
       await tick(tester);
       await tester.tap(find.byType(FloatingActionButton));
@@ -518,9 +555,7 @@ void main() {
   // ============================================================
 
   group('Kelas & Jurusan - tombol tambah bekerja', () {
-    smokeTest('FABtab Kelas membuka form kelas', (
-      WidgetTester tester,
-    ) async {
+    smokeTest('FABtab Kelas membuka form kelas', (WidgetTester tester) async {
       await tester.pumpWidget(wrap(const KelasScreen()));
       await tick(tester);
       await tester.tap(find.byType(FloatingActionButton));

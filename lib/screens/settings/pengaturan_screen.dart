@@ -10,6 +10,7 @@ import '../../widgets/confirm_dialog.dart';
 import '../pengeluaran/pengeluaran_screen.dart';
 import '../payments/tunggakan_screen.dart';
 import '../transactions/audit_log_screen.dart';
+import 'about_us_screen.dart';
 import 'backup_restore_screen.dart';
 import 'profil_sekolah_screen.dart';
 import 'ubah_pin_screen.dart';
@@ -112,6 +113,12 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             subtitle: 'Jejak aktivitas pengguna',
             onTap: () => _push<void>(context, const AuditLogScreen()),
           ),
+          _tile(
+            icon: Icons.info_outline_rounded,
+            title: 'Tentang',
+            subtitle: 'Informasi aplikasi dan kelompok pengabdi',
+            onTap: () => _push<void>(context, const AboutUsScreen()),
+          ),
           const SizedBox(height: 8),
           _tile(
             icon: Icons.logout_rounded,
@@ -119,19 +126,6 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             subtitle: 'Keluar dari aplikasi',
             color: AppColors.danger,
             onTap: () => _logout(context, session),
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: <Widget>[
-                Text(
-                  'Kas Bintang Nusantara',
-                  style: AppText.bodySmall.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 2),
-                Text('Versi ${AppConstants.appVersion}', style: AppText.bodySmall),
-              ],
-            ),
           ),
         ],
       ),
