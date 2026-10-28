@@ -367,15 +367,6 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'BENDAHARA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
                 ),
               ],
             ),
