@@ -4,5 +4,5 @@
     <color name="splash_background">#0A1F44</color>
     <color name="brand_orange">#E88A0C</color>
     <color name="brand_teal">#3FA796</color>
-    <color name="ic_launcher_background">#0A1F44</color>
+    <color name="ic_launcher_background">#00000000</color>
 </resources>
