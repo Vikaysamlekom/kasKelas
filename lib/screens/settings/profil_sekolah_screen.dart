@@ -410,7 +410,7 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
                 ? const Icon(Icons.school_rounded, size: 48, color: AppColors.textMuted)
                 : Image.file(
                     File(_logoPath!),
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     errorBuilder: (BuildContext _, Object _, StackTrace? _) => const Icon(
                       Icons.broken_image_rounded,
                       size: 40,
