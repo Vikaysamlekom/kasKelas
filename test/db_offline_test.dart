@@ -791,6 +791,20 @@ void main() {
         expect(rows.single.bayar, 15000);
         expect(rows.single.tunggakan, 25000);
         expect(rows.single.status, PaymentStatus.sebagian);
+
+        final List<LaporanPembayaranSiswa> bulanan = await laporan
+            .pembayaranSiswa(periode: periode, cashTypeId: kasBulananId);
+        expect(bulanan.single.tagihan, 10000);
+        expect(bulanan.single.bayar, 10000);
+        expect(bulanan.single.tunggakan, 0);
+        expect(bulanan.single.status, PaymentStatus.lunas);
+
+        final List<LaporanPembayaranSiswa> mingguan = await laporan
+            .pembayaranSiswa(periode: periode, cashTypeId: kasMingguanId);
+        expect(mingguan.single.tagihan, 30000);
+        expect(mingguan.single.bayar, 5000);
+        expect(mingguan.single.tunggakan, 25000);
+        expect(mingguan.single.status, PaymentStatus.sebagian);
       },
     );
 

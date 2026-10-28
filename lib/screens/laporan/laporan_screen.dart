@@ -68,7 +68,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
 
   Future<void> _loadProfil() async {
     try {
-      final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
+      final SchoolProfileModel? profil = await SchoolProfileRepository()
+          .getProfile();
       if (mounted && profil != null) setState(() => _profil = profil);
     } catch (e) {
       if (mounted) _snack('Gagal memuat profil sekolah: $e');
@@ -106,6 +107,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           periode: p,
           classId: _filter.classId,
           majorId: _filter.majorId,
+          cashTypeId: _filter.cashTypeId,
           statusFilter: _filter.statusSiswa,
         );
         if (mounted && requestId == _computeRequestId) {
@@ -243,7 +245,13 @@ class _LaporanScreenState extends State<LaporanScreen> {
             .toList();
       default:
         return _baris
-            .map((LaporanBaris b) => <String>[b.label, '${b.jumlah}', '${b.nominal}'])
+            .map(
+              (LaporanBaris b) => <String>[
+                b.label,
+                '${b.jumlah}',
+                '${b.nominal}',
+              ],
+            )
             .toList();
     }
   }
@@ -312,7 +320,10 @@ class _LaporanScreenState extends State<LaporanScreen> {
     );
   }
 
-  Future<void> _export({required String ext, required Future<dynamic> Function() builder}) async {
+  Future<void> _export({
+    required String ext,
+    required Future<dynamic> Function() builder,
+  }) async {
     if (_processing) return;
     setState(() => _processing = true);
     try {
@@ -359,7 +370,12 @@ class _LaporanScreenState extends State<LaporanScreen> {
     await SharePlus.instance.share(
       ShareParams(
         files: <XFile>[
-          XFile(file.path, mimeType: file.path.endsWith('.pdf') ? 'application/pdf' : 'text/csv'),
+          XFile(
+            file.path,
+            mimeType: file.path.endsWith('.pdf')
+                ? 'application/pdf'
+                : 'text/csv',
+          ),
         ],
         text: '$_judul - ${_sekolah()}',
         downloadFallbackEnabled: true,
@@ -393,7 +409,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ------------------------------------------------------------
@@ -542,7 +559,11 @@ class _LaporanScreenState extends State<LaporanScreen> {
       );
     }
     if (_error != null) {
-      return EmptyState(icon: Icons.error_outline, title: 'Terjadi kesalahan', message: _error);
+      return EmptyState(
+        icon: Icons.error_outline,
+        title: 'Terjadi kesalahan',
+        message: _error,
+      );
     }
     switch (_jenis) {
       case _JenisLaporan.pemasukan:
@@ -689,7 +710,9 @@ class _JenisCard extends StatelessWidget {
         width: width,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.navy.withValues(alpha: 0.07) : AppColors.background,
+          color: selected
+              ? AppColors.navy.withValues(alpha: 0.07)
+              : AppColors.background,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? AppColors.navy : AppColors.divider,
@@ -698,7 +721,11 @@ class _JenisCard extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(icon, size: 18, color: selected ? AppColors.navy : AppColors.textMuted),
+            Icon(
+              icon,
+              size: 18,
+              color: selected ? AppColors.navy : AppColors.textMuted,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -721,7 +748,11 @@ class _PickChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _PickChip({required this.label, required this.selected, required this.onTap});
+  const _PickChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -733,7 +764,9 @@ class _PickChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.navy : AppColors.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? AppColors.navy : AppColors.divider),
+          border: Border.all(
+            color: selected ? AppColors.navy : AppColors.divider,
+          ),
         ),
         child: Text(
           label,
@@ -752,7 +785,11 @@ class _DatePickTile extends StatelessWidget {
   final DateTime? date;
   final VoidCallback onTap;
 
-  const _DatePickTile({required this.label, required this.date, required this.onTap});
+  const _DatePickTile({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -760,8 +797,14 @@ class _DatePickTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, prefixIcon: const Icon(Icons.event_outlined)),
-        child: Text(date == null ? 'Pilih' : Formatters.tanggal(date!), style: AppText.body),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.event_outlined),
+        ),
+        child: Text(
+          date == null ? 'Pilih' : Formatters.tanggal(date!),
+          style: AppText.body,
+        ),
       ),
     );
   }
@@ -836,7 +879,11 @@ class _FilterSection extends StatelessWidget {
                   value: filter.classId,
                   items: classItems,
                   onChanged: (int? v) {
-                    onFilter(filter.copyWith(classId: () => v == null || v == 0 ? null : v));
+                    onFilter(
+                      filter.copyWith(
+                        classId: () => v == null || v == 0 ? null : v,
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(width: 8),
@@ -845,18 +892,27 @@ class _FilterSection extends StatelessWidget {
                   value: filter.majorId,
                   items: majorItems,
                   onChanged: (int? v) {
-                    onFilter(filter.copyWith(majorId: () => v == null || v == 0 ? null : v));
+                    onFilter(
+                      filter.copyWith(
+                        majorId: () => v == null || v == 0 ? null : v,
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(width: 8),
               ],
-              if (jenis == _JenisLaporan.pemasukan) ...<Widget>[
+              if (jenis == _JenisLaporan.pemasukan ||
+                  jenis == _JenisLaporan.siswa) ...<Widget>[
                 FilterDropdown<int>(
                   label: 'Jenis Kas',
                   value: filter.cashTypeId,
                   items: cashTypeItems,
                   onChanged: (int? v) {
-                    onFilter(filter.copyWith(cashTypeId: () => v == null || v == 0 ? null : v));
+                    onFilter(
+                      filter.copyWith(
+                        cashTypeId: () => v == null || v == 0 ? null : v,
+                      ),
+                    );
                   },
                 ),
               ],
@@ -866,7 +922,11 @@ class _FilterSection extends StatelessWidget {
                   value: filter.categoryId,
                   items: categoryItems,
                   onChanged: (int? v) {
-                    onFilter(filter.copyWith(categoryId: () => v == null || v == 0 ? null : v));
+                    onFilter(
+                      filter.copyWith(
+                        categoryId: () => v == null || v == 0 ? null : v,
+                      ),
+                    );
                   },
                 ),
               ],
@@ -880,7 +940,8 @@ class _FilterSection extends StatelessWidget {
                       onTap: () {
                         onFilter(
                           filter.copyWith(
-                            statusSiswa: () => filter.statusSiswa == value ? null : value,
+                            statusSiswa: () =>
+                                filter.statusSiswa == value ? null : value,
                           ),
                         );
                       },
@@ -972,7 +1033,9 @@ class _GroupedContent extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '$totalJumlah',
-                      style: AppText.amountMedium.copyWith(color: AppColors.navy),
+                      style: AppText.amountMedium.copyWith(
+                        color: AppColors.navy,
+                      ),
                     ),
                   ],
                 ),
@@ -993,18 +1056,24 @@ class _GroupedContent extends StatelessWidget {
                     height: 40,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: (income ? AppColors.teal : AppColors.danger).withValues(alpha: 0.12),
+                      color: (income ? AppColors.teal : AppColors.danger)
+                          .withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      income ? Icons.south_west_rounded : Icons.north_east_rounded,
+                      income
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded,
                       size: 20,
                       color: income ? AppColors.teal : AppColors.danger,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(b.label, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      b.label,
+                      style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -1072,7 +1141,11 @@ class _SaldoContent extends StatelessWidget {
           value: Formatters.rupiah(s.saldoAwal),
           color: AppColors.navy,
         ),
-        _SaldoRow(label: 'Pemasukan', value: Formatters.rupiah(s.pemasukan), color: AppColors.teal),
+        _SaldoRow(
+          label: 'Pemasukan',
+          value: Formatters.rupiah(s.pemasukan),
+          color: AppColors.teal,
+        ),
         _SaldoRow(
           label: 'Pengeluaran',
           value: Formatters.rupiah(s.pengeluaran),
@@ -1088,7 +1161,11 @@ class _SaldoRow extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _SaldoRow({required this.label, required this.value, required this.color});
+  const _SaldoRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1097,11 +1174,17 @@ class _SaldoRow extends StatelessWidget {
       child: AppCard(
         child: Row(
           children: <Widget>[
-            Text(label, style: AppText.body.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: AppText.body.copyWith(fontWeight: FontWeight.w600),
+            ),
             const Spacer(),
             Text(
               value,
-              style: AppText.body.copyWith(fontWeight: FontWeight.w800, color: color),
+              style: AppText.body.copyWith(
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -1156,7 +1239,9 @@ class _SiswaContent extends StatelessWidget {
             dataRowMaxHeight: 52,
             columnSpacing: 18,
             horizontalMargin: 12,
-            headingRowColor: WidgetStateProperty.all<Color>(AppColors.navy.withValues(alpha: 0.07)),
+            headingRowColor: WidgetStateProperty.all<Color>(
+              AppColors.navy.withValues(alpha: 0.07),
+            ),
             columns: const <DataColumn>[
               DataColumn(label: Text('NIS', style: AppText.label)),
               DataColumn(label: Text('Nama', style: AppText.label)),
@@ -1175,18 +1260,36 @@ class _SiswaContent extends StatelessWidget {
                       DataCell(
                         Text(
                           s.name,
-                          style: AppText.bodySmall.copyWith(fontWeight: FontWeight.w700),
+                          style: AppText.bodySmall.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      DataCell(Text(s.className ?? '-', style: AppText.bodySmall)),
-                      DataCell(Text(s.majorName ?? '-', style: AppText.bodySmall)),
-                      DataCell(Text(Formatters.rupiah(s.tagihan), style: AppText.bodySmall)),
-                      DataCell(Text(Formatters.rupiah(s.bayar), style: AppText.bodySmall)),
+                      DataCell(
+                        Text(s.className ?? '-', style: AppText.bodySmall),
+                      ),
+                      DataCell(
+                        Text(s.majorName ?? '-', style: AppText.bodySmall),
+                      ),
+                      DataCell(
+                        Text(
+                          Formatters.rupiah(s.tagihan),
+                          style: AppText.bodySmall,
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          Formatters.rupiah(s.bayar),
+                          style: AppText.bodySmall,
+                        ),
+                      ),
                       DataCell(
                         Text(
                           Formatters.rupiah(s.tunggakan),
                           style: AppText.bodySmall.copyWith(
-                            color: s.tunggakan > 0 ? AppColors.danger : AppColors.teal,
+                            color: s.tunggakan > 0
+                                ? AppColors.danger
+                                : AppColors.teal,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

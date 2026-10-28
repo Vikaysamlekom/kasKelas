@@ -119,7 +119,8 @@ class LaporanRepository {
       'AND substr(expense_date, 1, 10) < ?',
       <Object?>[startKey],
     );
-    return (Sqflite.firstIntValue(masuk) ?? 0) - (Sqflite.firstIntValue(keluar) ?? 0);
+    return (Sqflite.firstIntValue(masuk) ?? 0) -
+        (Sqflite.firstIntValue(keluar) ?? 0);
   }
 
   Future<int> _sumPemasukan(PeriodeLaporan periode) async {
@@ -151,9 +152,13 @@ class LaporanRepository {
     required PeriodeLaporan periode,
     int? classId,
     int? majorId,
+    int? cashTypeId,
     String? statusFilter,
   }) async {
-    final List<String> where = <String>["s.status = 'aktif'", 's.is_active = 1'];
+    final List<String> where = <String>[
+      "s.status = 'aktif'",
+      's.is_active = 1',
+    ];
     final List<Object?> args = <Object?>[];
     if (classId != null) {
       where.add('s.class_id = ?');
@@ -164,8 +169,13 @@ class LaporanRepository {
       args.add(majorId);
     }
 
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Object?> paymentArgs = <Object?>[
+      periode.startKey,
+      periode.endKey,
+      ?cashTypeId,
+      ...args,
+    ];
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT s.nis, s.name, c.name AS class_name, m.name AS major_name,
              COALESCE(SUM(
                CASE WHEN p.status != '${PaymentStatus.batal}'
@@ -178,15 +188,21 @@ class LaporanRepository {
       LEFT JOIN ${DBHelper.tblMajors} m
         ON m.id = COALESCE(s.major_id, c.major_id)
       LEFT JOIN ${DBHelper.tblPayments} p ON p.student_id = s.id
+        ${cashTypeId == null ? '' : 'AND p.cash_type_id = ?'}
       WHERE ${where.join(' AND ')}
       GROUP BY s.id
       ORDER BY c.level ASC, c.name ASC, s.name ASC
-      ''',
-      <Object?>[periode.startKey, periode.endKey, ...args],
-    );
+      ''', paymentArgs);
 
+    final List<String> cashTypeWhere = <String>['is_active = 1'];
+    final List<Object?> cashTypeArgs = <Object?>[?cashTypeId];
+    if (cashTypeId != null) {
+      cashTypeWhere.add('id = ?');
+    }
     final List<Map<String, Object?>> cashTypeRows = await _db.rawQuery(
-      'SELECT * FROM ${DBHelper.tblCashTypes} WHERE is_active = 1',
+      'SELECT * FROM ${DBHelper.tblCashTypes} '
+      'WHERE ${cashTypeWhere.join(' AND ')}',
+      cashTypeArgs,
     );
     final List<CashTypeModel> cashTypes = cashTypeRows
         .map(CashTypeModel.fromMap)
@@ -214,7 +230,9 @@ class LaporanRepository {
       } else {
         status = PaymentStatus.belum;
       }
-      if (statusFilter != null && statusFilter.isNotEmpty && status != statusFilter) {
+      if (statusFilter != null &&
+          statusFilter.isNotEmpty &&
+          status != statusFilter) {
         continue;
       }
       result.add(
@@ -242,7 +260,8 @@ class LaporanRepository {
     KelompokLaporan kelompok,
     String dateColumn,
   ) {
-    final LinkedHashMap<String, (int, int)> map = LinkedHashMap<String, (int, int)>();
+    final LinkedHashMap<String, (int, int)> map =
+        LinkedHashMap<String, (int, int)>();
     for (final Map<String, Object?> r in rows) {
       final String key = _keyPemasukan(r, kelompok, dateColumn);
       final (int, int) cur = map[key] ?? (0, 0);
@@ -255,7 +274,8 @@ class LaporanRepository {
     List<Map<String, Object?>> rows,
     KelompokLaporan kelompok,
   ) {
-    final LinkedHashMap<String, (int, int)> map = LinkedHashMap<String, (int, int)>();
+    final LinkedHashMap<String, (int, int)> map =
+        LinkedHashMap<String, (int, int)>();
     for (final Map<String, Object?> r in rows) {
       final String key;
       switch (kelompok) {
@@ -274,7 +294,11 @@ class LaporanRepository {
     return _toBaris(map, kelompok);
   }
 
-  String _keyPemasukan(Map<String, Object?> r, KelompokLaporan kelompok, String dateColumn) {
+  String _keyPemasukan(
+    Map<String, Object?> r,
+    KelompokLaporan kelompok,
+    String dateColumn,
+  ) {
     switch (kelompok) {
       case KelompokLaporan.perTanggal:
         return (r[dateColumn] as String).substring(0, 10);
@@ -291,9 +315,13 @@ class LaporanRepository {
     }
   }
 
-  List<LaporanBaris> _toBaris(LinkedHashMap<String, (int, int)> map, KelompokLaporan kelompok) {
+  List<LaporanBaris> _toBaris(
+    LinkedHashMap<String, (int, int)> map,
+    KelompokLaporan kelompok,
+  ) {
     final bool byTanggalBulan =
-        kelompok == KelompokLaporan.perTanggal || kelompok == KelompokLaporan.perBulan;
+        kelompok == KelompokLaporan.perTanggal ||
+        kelompok == KelompokLaporan.perBulan;
     final List<String> keys = map.keys.toList();
     if (byTanggalBulan) {
       keys.sort();
