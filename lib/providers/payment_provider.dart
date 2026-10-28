@@ -260,12 +260,14 @@ class PaymentProvider extends ChangeNotifier {
     int month,
     int year, {
     required int cashTypeId,
+    DateTime? paidDate,
   }) {
     return paymentRepository.monthlyStatus(
       studentId,
       month,
       year,
       cashTypeId: cashTypeId,
+      paidDate: paidDate,
     );
   }
 

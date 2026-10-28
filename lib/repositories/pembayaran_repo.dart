@@ -306,14 +306,27 @@ class PaymentRepository {
     int month,
     int year, {
     required int cashTypeId,
+    DateTime? paidDate,
   }) async {
     final CashTypeModel? cashType = await getCashType(cashTypeId);
     final int owed = cashType?.amount ?? 0;
+    final bool isDaily = cashType?.frequency == PaymentFrequency.harian;
+    final String dateKey = paidDate == null
+        ? ''
+        : '${paidDate.year.toString().padLeft(4, '0')}-'
+              '${paidDate.month.toString().padLeft(2, '0')}-'
+              '${paidDate.day.toString().padLeft(2, '0')}';
+    final String periodFilter = isDaily && paidDate != null
+        ? 'substr(paid_date, 1, 10) = ?'
+        : 'month = ? AND year = ?';
+    final List<Object?> args = isDaily && paidDate != null
+        ? <Object?>[studentId, cashTypeId, dateKey]
+        : <Object?>[studentId, cashTypeId, month, year];
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS s FROM ${DBHelper.tblPayments} '
-      'WHERE student_id = ? AND cash_type_id = ? AND month = ? AND year = ? '
+      'WHERE student_id = ? AND cash_type_id = ? AND $periodFilter '
       "AND status != '${PaymentStatus.batal}'",
-      <Object?>[studentId, cashTypeId, month, year],
+      args,
     );
     final int paid = Sqflite.firstIntValue(rows) ?? 0;
     return _buildPeriodStatus(owed, paid);

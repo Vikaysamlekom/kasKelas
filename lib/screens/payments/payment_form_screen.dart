@@ -199,6 +199,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         month,
         year,
         cashTypeId: cashTypeId,
+        paidDate: _paidDate,
       );
       if (mounted && requestId == _statusRequestId) {
         setState(() {
@@ -235,6 +236,7 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     );
     if (picked != null) {
       setState(() => _paidDate = picked);
+      _refreshStatus();
     }
   }
 

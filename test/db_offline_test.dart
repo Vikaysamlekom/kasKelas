@@ -95,8 +95,13 @@ void main() {
     );
     siswaId = siswaBaru.id!;
 
-    kasBulananId = (await DBHelper.instance.query(DBHelper.tblCashTypes, where: 'code = ?', whereArgs: <Object?>['BULANAN']))
-        .first['id'] as int;
+    kasBulananId =
+        (await DBHelper.instance.query(
+              DBHelper.tblCashTypes,
+              where: 'code = ?',
+              whereArgs: <Object?>['BULANAN'],
+            )).first['id']
+            as int;
 
     hariIni = now.toIso8601String().substring(0, 10);
 
@@ -142,18 +147,13 @@ void main() {
     });
 
     test('jenis kas bulanan bawaan bernominal Rp10.000', () async {
-      final List<Map<String, Object?>> rows =
-          await DBHelper.instance.query(DBHelper.tblCashTypes);
+      final List<Map<String, Object?>> rows = await DBHelper.instance.query(DBHelper.tblCashTypes);
       expect(rows, hasLength(1));
       expect(rows.single['name'], 'Kas Bulanan');
       expect(rows.single['code'], 'BULANAN');
       expect(rows.single['frequency'], 'bulanan');
       for (final Map<String, Object?> r in rows) {
-        expect(
-          r['amount'],
-          10000,
-          reason: 'Nominal bawaan ${r['name']} harus Rp10.000',
-        );
+        expect(r['amount'], 10000, reason: 'Nominal bawaan ${r['name']} harus Rp10.000');
       }
       expect(
         await pembayaran.kasPerBulan(),
@@ -174,8 +174,9 @@ void main() {
     });
 
     test('foreign key aktif', () async {
-      final List<Map<String, Object?>> pragma =
-          await DBHelper.instance.rawQuery('PRAGMA foreign_keys');
+      final List<Map<String, Object?>> pragma = await DBHelper.instance.rawQuery(
+        'PRAGMA foreign_keys',
+      );
       expect(pragma.first.values.first, 1);
     });
   });
@@ -227,13 +228,29 @@ void main() {
   group('Siswa', () {
     test('NIS ganda ditolak', () async {
       expect(
-        () => siswa.insert(StudentModel(nis: '1001', name: 'Duplikat', classId: kelasId, createdAt: now, updatedAt: now)),
+        () => siswa.insert(
+          StudentModel(
+            nis: '1001',
+            name: 'Duplikat',
+            classId: kelasId,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ),
         throwsA(isA<DuplicateNisException>()),
       );
     });
 
     test('pencarian & filter kelas bekerja', () async {
-      await siswa.insert(StudentModel(nis: '1002', name: 'Bella Putri', classId: kelasId, createdAt: now, updatedAt: now));
+      await siswa.insert(
+        StudentModel(
+          nis: '1002',
+          name: 'Bella Putri',
+          classId: kelasId,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
       final List<StudentModel> hasil = await siswa.list(const StudentFilter(search: 'bella'));
       expect(hasil.length, 1);
       expect(hasil.first.name, 'Bella Putri');
@@ -386,8 +403,7 @@ void main() {
 
       // Tunggakan juga per jenis kas: kas sosial belum dibayar → muncul
       // dengan sisa 10.000, bukan total gabungan.
-      final List<TunggakanItem> tunggakanSosial = await pembayaran
-          .listTunggakan(
+      final List<TunggakanItem> tunggakanSosial = await pembayaran.listTunggakan(
         month: now.month,
         year: now.year,
         cashTypeId: kasSosialId,
@@ -398,6 +414,53 @@ void main() {
       expect(tunggakanSosial.first.paid, 0);
       expect(tunggakanSosial.first.sisa, 10000);
       expect(tunggakanSosial.first.status, PaymentStatus.belum);
+    });
+
+    test('status kas harian dihitung ulang untuk setiap tanggal', () async {
+      final int kasHarianId = await DBHelper.instance.insert(
+        DBHelper.tblCashTypes,
+        <String, Object?>{
+          'name': 'Kas Harian',
+          'code': 'HARIAN',
+          'amount': 5000,
+          'frequency': 'harian',
+          'due_day': 10,
+          'is_active': 1,
+          'created_at': now.toIso8601String(),
+        },
+      );
+      final DateTime kemarin = now.subtract(const Duration(days: 1));
+      final DateTime besok = now.add(const Duration(days: 1));
+
+      await pembayaran.add(
+        studentId: siswaId,
+        cashTypeId: kasHarianId,
+        amount: 5000,
+        month: kemarin.month,
+        year: kemarin.year,
+        paidDate: kemarin.toIso8601String(),
+        recordedBy: userId,
+      );
+
+      final dynamic statusKemarin = await pembayaran.monthlyStatus(
+        siswaId,
+        kemarin.month,
+        kemarin.year,
+        cashTypeId: kasHarianId,
+        paidDate: kemarin,
+      );
+      final dynamic statusBesok = await pembayaran.monthlyStatus(
+        siswaId,
+        besok.month,
+        besok.year,
+        cashTypeId: kasHarianId,
+        paidDate: besok,
+      );
+
+      expect(statusKemarin.status, PaymentStatus.lunas);
+      expect(statusBesok.paid, 0);
+      expect(statusBesok.sisa, 5000);
+      expect(statusBesok.status, PaymentStatus.belum);
     });
 
     test('kode transaksi tidak bentrok setelah pembatalan', () async {
@@ -428,8 +491,12 @@ void main() {
   group('Pengeluaran', () {
     test('menyimpan pengeluaran dan mengurangi saldo', () async {
       final int kategoriId =
-          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Operasional']))
-              .first['id'] as int;
+          (await DBHelper.instance.query(
+                DBHelper.tblExpenseCategories,
+                where: 'name = ?',
+                whereArgs: <Object?>['Operasional'],
+              )).first['id']
+              as int;
 
       await pembayaran.add(
         studentId: siswaId,
@@ -457,8 +524,12 @@ void main() {
 
     test('pengeluaran melebihi pemasukan ditolak', () async {
       final int kategoriId =
-          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Operasional']))
-              .first['id'] as int;
+          (await DBHelper.instance.query(
+                DBHelper.tblExpenseCategories,
+                where: 'name = ?',
+                whereArgs: <Object?>['Operasional'],
+              )).first['id']
+              as int;
 
       // Belum ada pemasukan → semua pengeluaran harus ditolak.
       expect(
@@ -508,8 +579,12 @@ void main() {
 
     test('pembatalan pengeluaran mengembalikan saldo', () async {
       final int kategoriId =
-          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['ATK']))
-              .first['id'] as int;
+          (await DBHelper.instance.query(
+                DBHelper.tblExpenseCategories,
+                where: 'name = ?',
+                whereArgs: <Object?>['ATK'],
+              )).first['id']
+              as int;
       await pembayaran.add(
         studentId: siswaId,
         cashTypeId: kasBulananId,
@@ -537,8 +612,12 @@ void main() {
   group('Saldo dashboard konsisten dengan laporan', () {
     test('saldo kedua sumber sama setelah pembatalan campuran', () async {
       final int kategoriId =
-          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Kegiatan']))
-              .first['id'] as int;
+          (await DBHelper.instance.query(
+                DBHelper.tblExpenseCategories,
+                where: 'name = ?',
+                whereArgs: <Object?>['Kegiatan'],
+              )).first['id']
+              as int;
 
       final dynamic p1 = await pembayaran.add(
         studentId: siswaId,
@@ -595,8 +674,12 @@ void main() {
         recordedBy: userId,
       );
       final int kategoriId =
-          (await DBHelper.instance.query(DBHelper.tblExpenseCategories, where: 'name = ?', whereArgs: <Object?>['Operasional']))
-              .first['id'] as int;
+          (await DBHelper.instance.query(
+                DBHelper.tblExpenseCategories,
+                where: 'name = ?',
+                whereArgs: <Object?>['Operasional'],
+              )).first['id']
+              as int;
       await pengeluaran.add(
         categoryId: kategoriId,
         amount: 10000,
@@ -668,7 +751,11 @@ void main() {
       );
       expect(await DBHelper.instance.count(DBHelper.tblPayments), 1);
 
-      await DBHelper.instance.delete(DBHelper.tblStudents, where: 'id = ?', whereArgs: <Object?>[s.id]);
+      await DBHelper.instance.delete(
+        DBHelper.tblStudents,
+        where: 'id = ?',
+        whereArgs: <Object?>[s.id],
+      );
       expect(await DBHelper.instance.count(DBHelper.tblPayments), 0);
     });
 
@@ -680,8 +767,11 @@ void main() {
         entityId: siswaId,
         description: 'Tambah siswa uji',
       );
-      final List<Map<String, Object?>> rows =
-          await DBHelper.instance.query(DBHelper.tblAuditLogs, where: 'entity_id = ?', whereArgs: <Object?>[siswaId]);
+      final List<Map<String, Object?>> rows = await DBHelper.instance.query(
+        DBHelper.tblAuditLogs,
+        where: 'entity_id = ?',
+        whereArgs: <Object?>[siswaId],
+      );
       expect(rows.length, 1);
       expect(rows.first['action'], 'create');
     });
@@ -691,7 +781,14 @@ void main() {
       expect(await DBHelper.instance.getSetting('uji_offline'), 'ya');
       await DBHelper.instance.setSetting('uji_offline', 'tidak');
       expect(await DBHelper.instance.getSetting('uji_offline'), 'tidak');
-      expect(await DBHelper.instance.count(DBHelper.tblSettings, where: 'key = ?', whereArgs: <Object?>['uji_offline']), 1);
+      expect(
+        await DBHelper.instance.count(
+          DBHelper.tblSettings,
+          where: 'key = ?',
+          whereArgs: <Object?>['uji_offline'],
+        ),
+        1,
+      );
     });
   });
 }

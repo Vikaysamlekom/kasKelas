@@ -8,10 +8,7 @@ import '../providers/navigation_provider.dart';
 class MainScreen extends StatefulWidget {
   final List<Widget> pages;
 
-  const MainScreen({
-    super.key,
-    required this.pages,
-  });
+  const MainScreen({super.key, required this.pages});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -45,10 +42,7 @@ class _MainScreenState extends State<MainScreen> {
             selectedIcon: Icon(Icons.payments_rounded),
             label: 'Pembayaran',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.apps_rounded),
-            label: 'Lainnya',
-          ),
+          NavigationDestination(icon: Icon(Icons.apps_rounded), label: 'Lainnya'),
         ],
       ),
     );
