@@ -1,8 +1,6 @@
 <div align="center">
 
-# 💸 kasKelas
-
-### Kas Bintang Nusantara
+# Kas Bintang Nusantara
 
 **Kelola kas kelas dengan lebih rapi, praktis, dan transparan.**
 
@@ -121,19 +119,3 @@ kasKelas/
 Menemukan bug atau punya ide pengembangan? Silakan buat **[Issue](https://github.com/ranggawaridat/kasKelas/issues)** atau ajukan **[Pull Request](https://github.com/ranggawaridat/kasKelas/pulls)**.
 
 Saat melaporkan masalah, sertakan versi aplikasi, versi Android, perangkat, serta langkah untuk mereproduksi masalah. **Jangan sertakan PIN atau data pribadi siswa.**
-
-## 👤 Pengembang
-
-**[Rangga Waridat](https://github.com/ranggawaridat)**
-
----
-
-<div align="center">
-
-**Dibuat dengan 💙 menggunakan Flutter**
-
-*Karena setiap rupiah kas kelas layak tercatat dengan baik.*
-
-⭐ **Suka proyek ini? Berikan star untuk mendukung pengembangannya!**
-
-</div>
