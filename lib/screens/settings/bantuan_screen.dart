@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class BantuanScreen extends StatelessWidget {
+class BantuanScreen extends StatefulWidget {
   const BantuanScreen({super.key});
 
+  @override
+  State<BantuanScreen> createState() => _BantuanScreenState();
+}
+
+class _BantuanScreenState extends State<BantuanScreen> {
   static const String _email = 'ranggawaridat@gmail.com';
   static const String _subject = 'Bantuan Aplikasi Kas Bintang Nusantara';
   static const String _body = '''
@@ -21,11 +26,24 @@ Langkah yang sudah dicoba:
 
 Terima kasih.''';
 
+  late final TextEditingController _messageController = TextEditingController(
+    text: _body,
+  );
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _kirimEmail(BuildContext context) async {
     final Uri emailUri = Uri(
       scheme: 'mailto',
       path: _email,
-      queryParameters: <String, String>{'subject': _subject, 'body': _body},
+      queryParameters: <String, String>{
+        'subject': _subject,
+        'body': _messageController.text,
+      },
     );
 
     try {
@@ -76,26 +94,25 @@ Terima kasih.''';
           ),
           const SizedBox(height: 8),
           const Text(
-            'Kirim email ke alamat berikut. Template pesan sudah disiapkan '
-            'agar kami dapat membantu dengan lebih cepat.',
+            'Jelaskan kendala atau pertanyaan Anda. Pesan dapat diedit sebelum '
+            'dikirim agar kami dapat membantu dengan lebih cepat.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-          SelectableText(
-            _email,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 24),
           const Text(
-            'Template email',
+            'Pesan bantuan',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: SelectableText(_body),
+          TextField(
+            controller: _messageController,
+            minLines: 8,
+            maxLines: 12,
+            keyboardType: TextInputType.multiline,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Tulis kendala atau pertanyaan Anda',
+              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),

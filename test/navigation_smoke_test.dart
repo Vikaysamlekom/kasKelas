@@ -364,20 +364,15 @@ void main() {
       await cekTile(tester, 'Audit Log', 'Audit Log');
     });
 
-    smokeTest('Bantuan menampilkan template email', (
+    smokeTest('Bantuan menyediakan pesan email yang bisa diedit', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(wrap(const PengaturanScreen()));
       await tick(tester);
-      await cekTile(tester, 'Bantuan', 'Template email');
+      await cekTile(tester, 'Bantuan', 'Pesan bantuan');
       expect(find.byType(BantuanScreen), findsOneWidget);
-      expect(find.text('ranggawaridat@gmail.com'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('Kirim Email'),
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Kirim Email'), findsOneWidget);
+      expect(find.text('ranggawaridat@gmail.com'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     smokeTest('Tentang menampilkan informasi aplikasi dan kelompok pengabdi', (
