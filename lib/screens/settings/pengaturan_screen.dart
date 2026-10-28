@@ -12,6 +12,7 @@ import '../payments/tunggakan_screen.dart';
 import '../transactions/audit_log_screen.dart';
 import 'about_us_screen.dart';
 import 'backup_restore_screen.dart';
+import 'bantuan_screen.dart';
 import 'profil_sekolah_screen.dart';
 import 'ubah_pin_screen.dart';
 
@@ -112,6 +113,12 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
             title: 'Audit Log',
             subtitle: 'Jejak aktivitas pengguna',
             onTap: () => _push<void>(context, const AuditLogScreen()),
+          ),
+          _tile(
+            icon: Icons.support_agent_outlined,
+            title: 'Bantuan',
+            subtitle: 'Hubungi pengembang melalui email',
+            onTap: () => _push<void>(context, const BantuanScreen()),
           ),
           _tile(
             icon: Icons.info_outline_rounded,

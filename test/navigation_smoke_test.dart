@@ -28,6 +28,7 @@ import 'package:kas_bintang_nusantara/screens/payments/payments_screen.dart';
 import 'package:kas_bintang_nusantara/screens/payments/tunggakan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/pengeluaran/pengeluaran_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/about_us_screen.dart';
+import 'package:kas_bintang_nusantara/screens/settings/bantuan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/settings/pengaturan_screen.dart';
 import 'package:kas_bintang_nusantara/screens/students/jenis_kas_screen.dart';
 import 'package:kas_bintang_nusantara/screens/students/kelas_screen.dart';
@@ -361,6 +362,22 @@ void main() {
       await tester.pumpWidget(wrap(const PengaturanScreen()));
       await tick(tester);
       await cekTile(tester, 'Audit Log', 'Audit Log');
+    });
+
+    smokeTest('Bantuan menampilkan template email', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(wrap(const PengaturanScreen()));
+      await tick(tester);
+      await cekTile(tester, 'Bantuan', 'Template email');
+      expect(find.byType(BantuanScreen), findsOneWidget);
+      expect(find.text('ranggawaridat@gmail.com'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Kirim Email'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Kirim Email'), findsOneWidget);
     });
 
     smokeTest('Tentang menampilkan informasi aplikasi dan kelompok pengabdi', (
