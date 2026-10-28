@@ -105,11 +105,13 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
       final Directory dir = await getTemporaryDirectory();
       final File file = File('${dir.path}/${PdfService.fileName(_payment!)}');
       await file.writeAsBytes(bytes, flush: true);
-      await SharePlus.instance.share(ShareParams(
-        files: <XFile>[XFile(file.path, mimeType: 'application/pdf')],
-        text: 'Bukti Pembayaran Kas - ${_payment!.paymentCode}',
-        downloadFallbackEnabled: true,
-      ));
+      await SharePlus.instance.share(
+        ShareParams(
+          files: <XFile>[XFile(file.path, mimeType: 'application/pdf')],
+          text: 'Bukti Pembayaran Kas - ${_payment!.paymentCode}',
+          downloadFallbackEnabled: true,
+        ),
+      );
     } catch (e) {
       if (mounted) _snack('Gagal membagikan PDF: $e');
     } finally {
@@ -118,9 +120,7 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
   }
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -130,12 +130,12 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _payment == null
-              ? const EmptyState(
-                  icon: Icons.folder_off_outlined,
-                  title: 'Data tidak ditemukan',
-                  message: 'Bukti pembayaran tidak tersedia.',
-                )
-              : _buildBody(_payment!),
+          ? const EmptyState(
+              icon: Icons.folder_off_outlined,
+              title: 'Data tidak ditemukan',
+              message: 'Bukti pembayaran tidak tersedia.',
+            )
+          : _buildBody(_payment!),
     );
   }
 
@@ -168,18 +168,11 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
               ),
               child: Column(
                 children: <Widget>[
-                  const Icon(
-                    Icons.school_rounded,
-                    color: AppColors.orange,
-                    size: 40,
-                  ),
+                  const Icon(Icons.school_rounded, color: AppColors.orange, size: 40),
                   const SizedBox(height: 8),
                   Text(
                     'SMK BINTANG NUSANTARA',
-                    style: AppText.sectionTitle.copyWith(
-                      color: Colors.white,
-                      fontSize: 17,
-                    ),
+                    style: AppText.sectionTitle.copyWith(color: Colors.white, fontSize: 17),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -192,20 +185,14 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       p.paymentCode,
-                      style: AppText.label.copyWith(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                      style: AppText.label.copyWith(color: Colors.white, fontSize: 12),
                     ),
                   ),
                 ],
@@ -223,8 +210,7 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
               child: Column(
                 children: <Widget>[
                   for (int i = 0; i < rows.length; i++)
-                    _row(rows[i].$1, rows[i].$2,
-                        last: i == rows.length - 1),
+                    _row(rows[i].$1, rows[i].$2, last: i == rows.length - 1),
                 ],
               ),
             ),
@@ -233,7 +219,7 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
             // CATATAN
             Text(
               'Dokumen ini dibuat otomatis oleh aplikasi Kas Bintang '
-              'Nusantara.\nHarap simpan untuk keperluan administrasi.',
+              'Nusantara.',
               style: AppText.caption,
               textAlign: TextAlign.center,
             ),
@@ -246,10 +232,7 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
           right: 16,
           bottom: 16,
           child: _processing
-              ? const SizedBox(
-                  height: 52,
-                  child: Center(child: CircularProgressIndicator()),
-                )
+              ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
               : Row(
                   children: <Widget>[
                     Expanded(
@@ -286,17 +269,12 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        border: last
-            ? null
-            : const Border(bottom: BorderSide(color: AppColors.divider)),
+        border: last ? null : const Border(bottom: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            flex: 2,
-            child: Text(label, style: AppText.caption),
-          ),
+          Expanded(flex: 2, child: Text(label, style: AppText.caption)),
           Expanded(
             flex: 3,
             child: Text(
