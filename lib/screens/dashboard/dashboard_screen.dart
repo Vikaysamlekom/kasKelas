@@ -206,7 +206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ? Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy)
           : Image.file(
               File(path),
-              fit: BoxFit.contain,
+              fit: BoxFit.cover,
               errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
                   Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy),
             ),

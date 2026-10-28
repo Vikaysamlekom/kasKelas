@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/payment_model.dart';
+import '../models/payment_period.dart';
 import '../utils/formatters.dart';
 
 /// Pembuat dokumen PDF (bukti pembayaran).
@@ -74,7 +75,16 @@ class PdfService {
             ('NIS', p.studentNis ?? '-'),
             ('Kelas', p.className ?? '-'),
             ('Jenis Kas', p.cashTypeName ?? '-'),
-            ('Periode', '${Formatters.namaBulan(p.month)} ${p.year}'),
+            (
+              'Periode',
+              PaymentPeriod.label(
+                frequency: p.cashTypeFrequency ?? 'bulanan',
+                start: p.periodStart,
+                end: p.periodEnd,
+                fallbackMonth: p.month,
+                fallbackYear: p.year,
+              ),
+            ),
             ('Nominal', 'Rp ${Formatters.angka(p.amount)}'),
             ('Status', PaymentStatus.label(p.status)),
             ('Tanggal Bayar', Formatters.tanggalIso(p.paidDate)),
@@ -94,7 +104,10 @@ class PdfService {
                 1: pw.FlexColumnWidth(3),
               },
               border: pw.TableBorder(
-                horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
+                horizontalInside: pw.BorderSide(
+                  color: PdfColors.grey200,
+                  width: 0.5,
+                ),
               ),
               children: <pw.TableRow>[
                 for (final (String label, String value) in rows)
@@ -105,7 +118,10 @@ class PdfService {
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           label,
-                          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            color: PdfColors.grey700,
+                          ),
                         ),
                       ),
                       pw.Padding(
@@ -136,7 +152,10 @@ class PdfService {
                   style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
                 ),
                 pw.SizedBox(height: 4),
-                pw.Text('Bendahara', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800)),
+                pw.Text(
+                  'Bendahara',
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+                ),
                 pw.SizedBox(height: 56),
                 pw.Text(
                   bendahara,

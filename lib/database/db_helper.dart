@@ -7,6 +7,8 @@ import 'package:sqflite/sqflite.dart';
 
 import '../core/app_error.dart';
 import '../core/constants.dart';
+import '../models/cash_type_model.dart';
+import '../models/payment_period.dart';
 
 /// Terjemahkan [DatabaseException] menjadi pesan yang bisa dipahami pengguna.
 String pesanDatabase(DatabaseException e, String konteks) {
@@ -73,7 +75,9 @@ class DBHelper {
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
         // Migrasi: versi 1 → 2 menambah dukungan foto nota & pembatalan.
         if (oldVersion < 2) {
-          await db.execute('ALTER TABLE $tblExpenses ADD COLUMN photo_path TEXT');
+          await db.execute(
+            'ALTER TABLE $tblExpenses ADD COLUMN photo_path TEXT',
+          );
           await db.execute(
             "ALTER TABLE $tblExpenses ADD COLUMN status TEXT NOT NULL DEFAULT 'valid'",
           );
@@ -137,8 +141,47 @@ class DBHelper {
         if (oldVersion < 7) {
           await _migrateWeeklyCashTypeDefaultsToMonthly(db);
         }
+        if (oldVersion < 8) {
+          await db.execute(
+            'ALTER TABLE $tblPayments ADD COLUMN period_start TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE $tblPayments ADD COLUMN period_end TEXT',
+          );
+          await _backfillPaymentPeriods(db);
+          await _createPaymentPeriodIndex(db);
+        }
       },
     );
+  }
+
+  Future<void> _backfillPaymentPeriods(Database db) async {
+    final List<Map<String, Object?>> rows = await db.rawQuery('''
+      SELECT p.id, p.month, p.year, p.paid_date, ct.frequency
+      FROM $tblPayments p
+      LEFT JOIN $tblCashTypes ct ON ct.id = p.cash_type_id
+      ''');
+    for (final Map<String, Object?> row in rows) {
+      final String frequency =
+          (row['frequency'] as String?) ?? PaymentFrequency.bulanan;
+      if (frequency == PaymentFrequency.sekali) {
+        continue;
+      }
+      final DateTime anchor = frequency == PaymentFrequency.bulanan
+          ? DateTime(row['year'] as int, row['month'] as int)
+          : DateTime.tryParse(row['paid_date'] as String) ??
+                DateTime(row['year'] as int, row['month'] as int);
+      final PaymentPeriod period = PaymentPeriod.forDate(anchor, frequency);
+      await db.update(
+        tblPayments,
+        <String, Object?>{
+          'period_start': PaymentPeriod.dateKey(period.start),
+          'period_end': PaymentPeriod.dateKey(period.end),
+        },
+        where: 'id = ?',
+        whereArgs: <Object?>[row['id']],
+      );
+    }
   }
 
   Future<void> _migrateMonthlyCashTypeDefaults(Database db) async {
@@ -376,6 +419,8 @@ class DBHelper {
         amount INTEGER NOT NULL,
         month INTEGER NOT NULL,
         year INTEGER NOT NULL,
+        period_start TEXT,
+        period_end TEXT,
         paid_date TEXT NOT NULL,
         payment_method TEXT NOT NULL DEFAULT 'tunai',
         status TEXT NOT NULL DEFAULT 'lunas',
@@ -490,6 +535,7 @@ class DBHelper {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_payments_paid_date ON $tblPayments (paid_date)',
     );
+    await _createPaymentPeriodIndex(db);
     // Laporan saldo/pengeluaran memakai substr(paid_date/expense_date, 1, 10).
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_payments_paid_date_prefix ON $tblPayments (substr(paid_date, 1, 10))',
@@ -548,6 +594,27 @@ class DBHelper {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_audit_entity ON $tblAuditLogs (entity_table, entity_id)',
+    );
+  }
+
+  Future<void> _createPaymentPeriodIndex(Database db) async {
+    final List<Map<String, Object?>> columns = await db.rawQuery(
+      'PRAGMA table_info($tblPayments)',
+    );
+    final Set<String> names = columns
+        .map((Map<String, Object?> column) => column['name'] as String)
+        .toSet();
+    const List<String> required = <String>[
+      'student_id',
+      'cash_type_id',
+      'period_start',
+      'period_end',
+      'status',
+    ];
+    if (!required.every(names.contains)) return;
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_payments_obligation_period '
+      'ON $tblPayments (student_id, cash_type_id, period_start, period_end, status)',
     );
   }
 
@@ -656,13 +723,10 @@ class DBHelper {
   // ------------------------------------------------------------------
 
   Future<int> insert(String table, Map<String, Object?> values) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        return db.insert(table, values);
-      },
-      'Menyimpan ke $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      return db.insert(table, values);
+    }, 'Menyimpan ke $table');
   }
 
   /// Error handling terpusat untuk setiap operasi database.
@@ -672,7 +736,9 @@ class DBHelper {
     try {
       return await action();
     } on DatabaseException catch (e) {
-      debugPrint('[DB] $konteks: ${e.result ?? e.isUniqueConstraintError} ($e)');
+      debugPrint(
+        '[DB] $konteks: ${e.result ?? e.isUniqueConstraintError} ($e)',
+      );
       throw AppException(
         pesanDatabase(e, konteks),
         cause: e,
@@ -680,11 +746,7 @@ class DBHelper {
       );
     } catch (e, stack) {
       debugPrint('[DB] $konteks: $e\n$stack');
-      throw AppException(
-        '$konteks gagal: $e',
-        cause: e,
-        stackTrace: stack,
-      );
+      throw AppException('$konteks gagal: $e', cause: e, stackTrace: stack);
     }
   }
 
@@ -696,33 +758,27 @@ class DBHelper {
     int? limit,
     int? offset,
   }) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        return db.query(
-          table,
-          where: where,
-          whereArgs: whereArgs,
-          orderBy: orderBy,
-          limit: limit,
-          offset: offset,
-        );
-      },
-      'Membaca tabel $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      return db.query(
+        table,
+        where: where,
+        whereArgs: whereArgs,
+        orderBy: orderBy,
+        limit: limit,
+        offset: offset,
+      );
+    }, 'Membaca tabel $table');
   }
 
   Future<List<Map<String, Object?>>> rawQuery(
     String sql, [
     List<Object?>? arguments,
   ]) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        return db.rawQuery(sql, arguments);
-      },
-      'Menjalankan query',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      return db.rawQuery(sql, arguments);
+    }, 'Menjalankan query');
   }
 
   Future<Map<String, Object?>?> queryOne(
@@ -730,19 +786,16 @@ class DBHelper {
     String? where,
     List<Object?>? whereArgs,
   }) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        final List<Map<String, Object?>> rows = await db.query(
-          table,
-          where: where,
-          whereArgs: whereArgs,
-          limit: 1,
-        );
-        return rows.isEmpty ? null : rows.first;
-      },
-      'Membaca data $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      final List<Map<String, Object?>> rows = await db.query(
+        table,
+        where: where,
+        whereArgs: whereArgs,
+        limit: 1,
+      );
+      return rows.isEmpty ? null : rows.first;
+    }, 'Membaca data $table');
   }
 
   Future<int> update(
@@ -751,13 +804,10 @@ class DBHelper {
     required String where,
     List<Object?>? whereArgs,
   }) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        return db.update(table, values, where: where, whereArgs: whereArgs);
-      },
-      'Memperbarui $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      return db.update(table, values, where: where, whereArgs: whereArgs);
+    }, 'Memperbarui $table');
   }
 
   Future<int> delete(
@@ -765,27 +815,21 @@ class DBHelper {
     required String where,
     List<Object?>? whereArgs,
   }) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        return db.delete(table, where: where, whereArgs: whereArgs);
-      },
-      'Menghapus $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      return db.delete(table, where: where, whereArgs: whereArgs);
+    }, 'Menghapus $table');
   }
 
   Future<int> count(String table, {String? where, List<Object?>? whereArgs}) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        final List<Map<String, Object?>> result = await db.rawQuery(
-          'SELECT COUNT(*) AS c FROM $table${where != null ? ' WHERE $where' : ''}',
-          whereArgs,
-        );
-        return Sqflite.firstIntValue(result) ?? 0;
-      },
-      'Menghitung $table',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      final List<Map<String, Object?>> result = await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM $table${where != null ? ' WHERE $where' : ''}',
+        whereArgs,
+      );
+      return Sqflite.firstIntValue(result) ?? 0;
+    }, 'Menghitung $table');
   }
 
   Future<int> sum(
@@ -794,27 +838,21 @@ class DBHelper {
     String? where,
     List<Object?>? whereArgs,
   }) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        final List<Map<String, Object?>> result = await db.rawQuery(
-          'SELECT COALESCE(SUM($column), 0) AS s FROM $table${where != null ? ' WHERE $where' : ''}',
-          whereArgs,
-        );
-        return Sqflite.firstIntValue(result) ?? 0;
-      },
-      'Menjumlahkan $column',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      final List<Map<String, Object?>> result = await db.rawQuery(
+        'SELECT COALESCE(SUM($column), 0) AS s FROM $table${where != null ? ' WHERE $where' : ''}',
+        whereArgs,
+      );
+      return Sqflite.firstIntValue(result) ?? 0;
+    }, 'Menjumlahkan $column');
   }
 
   Future<void> transaction(Future<void> Function(Transaction txn) action) {
-    return _safe(
-      () async {
-        final Database db = await database;
-        await db.transaction((Transaction txn) => action(txn));
-      },
-      'Menyimpan transaksi data',
-    );
+    return _safe(() async {
+      final Database db = await database;
+      await db.transaction((Transaction txn) => action(txn));
+    }, 'Menyimpan transaksi data');
   }
 
   // ------------------------------------------------------------------

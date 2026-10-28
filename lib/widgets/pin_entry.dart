@@ -154,7 +154,13 @@ class _KeyButton extends StatelessWidget {
       color: accent ? AppColors.navy : AppColors.card,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: onTap,
+        enableFeedback: false,
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
         borderRadius: BorderRadius.circular(16),
         child: Container(
           alignment: Alignment.center,

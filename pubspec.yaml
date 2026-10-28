@@ -3,7 +3,7 @@ description: "Aplikasi pengelolaan kas siswa SMK Bintang Nusantara (offline)."
 publish_to: 'none'
 
 # Format: versionName+versionCode. Naikkan keduanya setiap rilis Android.
-version: 1.0.7+6
+version: 1.0.8+6
 
 environment:
   sdk: ^3.13.4
@@ -38,6 +38,7 @@ dependencies:
   image_picker: ^1.2.3
 
   cupertino_icons: ^1.0.8
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
@@ -53,6 +54,8 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon.png"
   min_sdk_android: 21
   remove_alpha_ios: true
 

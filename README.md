@@ -1,65 +1,121 @@
+<div align="center">
+
 # Kas Bintang Nusantara
 
-Aplikasi Android untuk membantu bendahara SMK Bintang Nusantara mengelola
-administrasi kas siswa. Aplikasi dibuat dengan Flutter dan menyimpan data
-secara lokal di perangkat menggunakan SQLite.
+**Kelola kas kelas dengan lebih rapi, praktis, dan transparan.**
 
-> **Penting:** Data tidak disinkronkan ke cloud. Buat dan salin backup secara
-> berkala agar data tetap aman jika perangkat hilang atau aplikasi dihapus.
+Aplikasi pengelolaan kas siswa berbasis Flutter yang bekerja secara **offline** — dirancang untuk membantu bendahara mencatat setiap pemasukan dan pengeluaran dengan mudah.
 
-## Fitur
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 
-- Mengelola data siswa, jurusan, kelas, dan jenis kas.
-- Mencatat pembayaran, tunggakan, serta pengeluaran dan kategorinya.
-- Melihat ringkasan saldo, riwayat transaksi, laporan, dan log aktivitas.
-- Mengekspor atau membagikan data dan dokumen dalam format CSV/PDF.
-- Melindungi akses aplikasi dengan PIN pribadi.
-- Membuat, membagikan, dan memulihkan backup database.
-- Menggunakan aplikasi secara offline; data operasional disimpan di SQLite
-  pada perangkat.
+[![Latest Release](https://img.shields.io/github/v/release/ranggawaridat/kasKelas?style=flat-square&label=Latest%20Release)](https://github.com/ranggawaridat/kasKelas/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/ranggawaridat/kasKelas?style=flat-square)](https://github.com/ranggawaridat/kasKelas/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/ranggawaridat/kasKelas?style=flat-square)](https://github.com/ranggawaridat/kasKelas/issues)
 
-## Informasi aplikasi
+**[⬇️ Unduh APK](https://github.com/ranggawaridat/kasKelas/releases/latest)** · **[🐛 Laporkan Masalah](https://github.com/ranggawaridat/kasKelas/issues)** · **[💻 Lihat Source Code](https://github.com/ranggawaridat/kasKelas)**
 
-| Informasi | Nilai |
-| --- | --- |
-| Nama aplikasi | Kas Bintang Nusantara |
-| Application ID | `com.bintangnusantara.kas` |
-| Versi paket Android | `1.0.7` (`versionCode` `6`) |
-| Minimum Android | Android 7.0 (API 24) |
-| Penyimpanan data | SQLite lokal |
-| Akun awal | Pengguna membuat PIN sendiri saat pertama kali membuka aplikasi |
+</div>
 
-## Instalasi di Android
+---
 
-APK rilis tidak disimpan di repository. Unduh APK dari halaman rilis atau
-salinan distribusi yang disediakan, lalu pilih sesuai perangkat:
+## ✨ Tentang Aplikasi
 
-| APK | Perangkat |
-| --- | --- |
-| `arm64-v8a` | Sebagian besar HP Android modern |
-| `armeabi-v7a` | Perangkat Android 32-bit yang lebih lama |
-| `x86_64` | Emulator atau perangkat Intel yang kompatibel |
-| `universal` | Berbagai arsitektur dalam satu file; ukuran file lebih besar |
+**kasKelas (Kas Bintang Nusantara)** adalah aplikasi Android untuk membantu bendahara **SMK Bintang Nusantara** mengelola administrasi kas siswa. Mulai dari pembayaran dan tunggakan hingga pengeluaran dan laporan, semuanya bisa dicatat dalam satu aplikasi.
 
-Jika tidak yakin arsitektur perangkat, gunakan APK `universal` bila tersedia.
+> 💡 **Offline-first:** Data operasional tersimpan secara lokal menggunakan SQLite. Aplikasi tidak memerlukan sinkronisasi cloud untuk digunakan.
 
-1. Salin atau unduh APK ke perangkat Android.
-2. Buka APK menggunakan aplikasi Files atau pengelola file.
-3. Jika diminta, izinkan instalasi aplikasi dari sumber tersebut, lalu lanjutkan
-   instalasi.
-4. Buka aplikasi dan buat PIN berisi 6–8 digit. Tidak ada PIN bawaan.
-5. Siapkan pertanyaan pemulihan agar fitur **Lupa PIN** dapat digunakan.
+## 🚀 Fitur Unggulan
 
-PIN diminta setiap kali aplikasi dibuka dan dapat diganti melalui
-**Pengaturan → Ubah PIN**.
+| Fitur | Deskripsi |
+| :--- | :--- |
+| 👩‍🎓 **Manajemen Siswa & Kelas** | Kelola data siswa, jurusan, kelas, dan jenis kas. |
+| 💰 **Pencatatan Pembayaran** | Catat pembayaran kas dan pantau tunggakan siswa. |
+| 🧾 **Pengeluaran** | Kelola pengeluaran beserta kategorinya. |
+| 📊 **Ringkasan & Laporan** | Pantau saldo, riwayat transaksi, laporan, dan log aktivitas. |
+| 📤 **Ekspor Dokumen** | Ekspor atau bagikan data dalam format CSV dan PDF. |
+| 🔐 **Keamanan PIN** | Lindungi akses dengan PIN pribadi dan pertanyaan pemulihan. |
+| 💾 **Backup & Restore** | Buat, bagikan, dan pulihkan cadangan database. |
+| 📵 **Akses Offline** | Data tersimpan di perangkat, tanpa ketergantungan pada cloud. |
 
-### Jika APK tidak dapat dipasang
+## 🛠️ Teknologi
 
-- **Aplikasi tidak terpasang atau tanda tangan berbeda:** versi sebelumnya
-  mungkin ditandatangani dengan kunci yang berbeda. Menghapus aplikasi lama
-  dapat diperlukan sebelum memasang APK baru. **Penghapusan aplikasi juga
-  menghapus data lokal**; buat dan salin backup terlebih dahulu.
-- **Versi Android tidak didukung:** perangkat harus menjalankan Android 7.0
-  atau lebih baru.
-- **Instalasi diblokir:** aktifkan izin instalasi untuk aplikasi yang digunakan
-  membuka APK, kemudian coba lagi.
+- **Flutter & Dart** — pengembangan aplikasi.
+- **SQLite** — penyimpanan data lokal.
+- **Android** — platform distribusi utama (minimal Android 7.0 / API 24).
+
+## 📥 Instalasi Android
+
+1. Buka halaman **[GitHub Releases](https://github.com/ranggawaridat/kasKelas/releases/latest)**.
+2. Unduh file APK yang sesuai dengan perangkat. Jika tersedia, pilih **`app-release.apk`** untuk versi universal.
+3. Buka APK di perangkat Android dan izinkan instalasi dari sumber tersebut jika diminta.
+4. Jalankan aplikasi, lalu buat **PIN 6–8 digit**.
+5. Atur pertanyaan pemulihan PIN dan buat backup awal setelah data selesai disiapkan.
+
+> ⚠️ **Penting:** Jangan langsung menghapus aplikasi saat mengalami masalah pembaruan. Data tersimpan secara lokal dan dapat hilang jika aplikasi dihapus tanpa backup.
+
+## 👨‍💻 Menjalankan dari Source Code
+
+**Prasyarat:** Flutter SDK (dengan versi Dart yang sesuai `pubspec.yaml`), Android SDK, Git, serta emulator atau perangkat Android.
+
+```bash
+# Clone repository
+git clone https://github.com/ranggawaridat/kasKelas.git
+
+# Masuk ke direktori proyek
+cd kasKelas
+
+# Instal dependensi
+flutter pub get
+
+# Periksa kode dan jalankan pengujian
+flutter analyze
+flutter test
+
+# Jalankan aplikasi
+flutter run
+```
+
+### 📦 Build APK
+
+```bash
+# APK universal
+flutter build apk --release
+
+# APK terpisah berdasarkan arsitektur
+flutter build apk --release --split-per-abi
+```
+
+Hasil build tersedia di `build/app/outputs/flutter-apk/`.
+
+> **Catatan rilis:** Pastikan APK distribusi resmi ditandatangani menggunakan keystore rilis yang konsisten. Jangan unggah keystore, password, atau `key.properties` ke repository.
+
+## 🔒 Privasi & Keamanan Data
+
+Data siswa dan transaksi disimpan **di perangkat pengguna**, bukan di server aplikasi. Untuk menjaga data tetap aman:
+
+- Buat backup secara berkala melalui **Pengaturan → Backup & Restore**.
+- Simpan salinan backup di tempat aman dan terpisah dari perangkat.
+- Jangan membagikan database, backup, CSV, atau PDF yang memuat data siswa secara publik.
+- Periksa file backup sebelum melakukan restore, karena proses pemulihan akan mengganti data aplikasi saat ini.
+
+## 🗂️ Struktur Proyek
+
+```text
+kasKelas/
+├── android/         # Konfigurasi aplikasi Android
+├── assets/          # Aset aplikasi
+├── lib/             # Source code Flutter
+├── test/            # Pengujian
+├── web/             # Konfigurasi target web Flutter
+├── pubspec.yaml     # Dependensi & metadata proyek
+└── README.md        # Dokumentasi
+```
+
+## 🤝 Kontribusi & Masukan
+
+Menemukan bug atau punya ide pengembangan? Silakan buat **[Issue](https://github.com/ranggawaridat/kasKelas/issues)** atau ajukan **[Pull Request](https://github.com/ranggawaridat/kasKelas/pulls)**.
+
+Saat melaporkan masalah, sertakan versi aplikasi, versi Android, perangkat, serta langkah untuk mereproduksi masalah. **Jangan sertakan PIN atau data pribadi siswa.**

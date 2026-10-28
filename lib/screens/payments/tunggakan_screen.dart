@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../providers/classes_provider.dart';
 import '../../providers/cash_types_provider.dart';
 import '../../models/cash_type_model.dart';
+import '../../models/payment_period.dart';
 import '../../providers/payment_provider.dart';
 import '../../repositories/pembayaran_repo.dart';
 import '../../utils/formatters.dart';
@@ -40,18 +41,25 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
     final ClassesProvider classes = context.watch<ClassesProvider>();
     final CashTypesProvider cashTypes = context.watch<CashTypesProvider>();
 
-    final List<TunggakanItem> items =
-        _applyStatusFilter(provider.tunggakan, provider.tunggakanFilter.status);
-    final int total =
-        items.fold<int>(0, (int sum, TunggakanItem t) => sum + t.sisa);
+    final List<TunggakanItem> items = _applyStatusFilter(
+      provider.tunggakan,
+      provider.tunggakanFilter.status,
+    );
+    final int total = items.fold<int>(
+      0,
+      (int sum, TunggakanItem t) => sum + t.sisa,
+    );
     // Nama jenis kas yang jadi dasar kewajiban pada tampilan ini.
-    String? namaKas;
+    CashTypeModel? selectedCashType;
     for (final CashTypeModel c in cashTypes.cashTypes) {
       if (c.id == provider.tunggakanFilter.cashTypeId) {
-        namaKas = c.name;
+        selectedCashType = c;
         break;
       }
     }
+    final DateTime periodDate =
+        provider.tunggakanFilter.periodDate ?? DateTime.now();
+    final String periodLabel = _periodLabel(selectedCashType, periodDate);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Tunggakan')),
@@ -73,16 +81,12 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      Formatters.rupiah(total),
-                      style: AppText.amountLarge,
-                    ),
+                    Text(Formatters.rupiah(total), style: AppText.amountLarge),
                     const SizedBox(height: 6),
                     Text(
                       '${items.length} siswa belum melunasi '
-                      '${namaKas ?? 'kewajiban'} · '
-                      '${Formatters.namaBulan(provider.tunggakanFilter.month ?? 0)} '
-                      '${provider.tunggakanFilter.year ?? ''}',
+                      '${selectedCashType?.name ?? 'kewajiban'} · '
+                      '$periodLabel',
                       style: AppText.caption.copyWith(
                         color: Colors.white.withValues(alpha: 0.8),
                       ),
@@ -113,31 +117,29 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
                     },
                   ),
                   const SizedBox(width: 8),
-                  FilterDropdown<int>(
-                    label: 'Bulan',
-                    value: provider.tunggakanFilter.month,
-                    items: _months,
-                    onChanged: (int? v) {
-                      provider.applyTunggakanFilter(month: v ?? 0);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  FilterDropdown<int>(
-                    label: 'Tahun',
-                    value: provider.tunggakanFilter.year,
-                    items: _years,
-                    onChanged: (int? v) {
-                      provider.applyTunggakanFilter(year: v ?? 0);
-                    },
-                  ),
+                  if (selectedCashType?.frequency != PaymentFrequency.sekali)
+                    SizedBox(
+                      width: 210,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickPeriodDate(provider, periodDate),
+                        icon: const Icon(Icons.calendar_month_outlined),
+                        label: Text(
+                          periodLabel,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                  else
+                    Chip(label: Text(periodLabel)),
                   const SizedBox(width: 8),
                   FilterDropdown<int>(
                     label: 'Kelas',
                     value: provider.tunggakanFilter.classId,
-                    items: (classes.classes
-                            .where((c) => c.kelas.isActive)
-                            .map((c) => (c.kelas.name, c.kelas.id!)))
-                        .toList(),
+                    items:
+                        (classes.classes
+                                .where((c) => c.kelas.isActive)
+                                .map((c) => (c.kelas.name, c.kelas.id!)))
+                            .toList(),
                     onChanged: (int? v) {
                       provider.applyTunggakanFilter(classId: v ?? 0);
                     },
@@ -146,10 +148,11 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
                   FilterDropdown<int>(
                     label: 'Jurusan',
                     value: provider.tunggakanFilter.majorId,
-                    items: (classes.majors
-                            .where((m) => m.major.isActive)
-                            .map((m) => (m.major.name, m.major.id!)))
-                        .toList(),
+                    items:
+                        (classes.majors
+                                .where((m) => m.major.isActive)
+                                .map((m) => (m.major.name, m.major.id!)))
+                            .toList(),
                     onChanged: (int? v) {
                       provider.applyTunggakanFilter(majorId: v ?? 0);
                     },
@@ -167,15 +170,13 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
                   _StatusChip(
                     label: 'Semua',
                     selected: provider.tunggakanFilter.status == '',
-                    onTap: () =>
-                        provider.applyTunggakanFilter(status: ''),
+                    onTap: () => provider.applyTunggakanFilter(status: ''),
                   ),
                   const SizedBox(width: 8),
                   _StatusChip(
                     label: 'Belum Bayar',
                     selected: provider.tunggakanFilter.status == 'belum',
-                    onTap: () =>
-                        provider.applyTunggakanFilter(status: 'belum'),
+                    onTap: () => provider.applyTunggakanFilter(status: 'belum'),
                   ),
                   const SizedBox(width: 8),
                   _StatusChip(
@@ -213,22 +214,48 @@ class _TunggakanScreenState extends State<TunggakanScreen> {
     return result;
   }
 
-  static final List<(String, int)> _months = _buildMonths();
-
-  static List<(String, int)> _buildMonths() {
-    final List<(String, int)> list = <(String, int)>[];
-    for (int m = 1; m <= 12; m++) {
-      list.add((Formatters.namaBulan(m), m));
+  Future<void> _pickPeriodDate(
+    PaymentProvider provider,
+    DateTime initialDate,
+  ) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: AppDateRange.clamp(initialDate),
+      firstDate: AppDateRange.minDate,
+      lastDate: AppDateRange.maxDate,
+      helpText: 'Pilih tanggal dalam periode kewajiban',
+    );
+    if (picked != null) {
+      provider.applyTunggakanFilter(
+        periodDate: picked,
+        month: picked.month,
+        year: picked.year,
+      );
     }
-    return list;
   }
 
-  static final List<(String, int)> _years = _buildYears();
-
-  static List<(String, int)> _buildYears() {
-    return <(String, int)>[
-      for (final int y in AppDateRange.semuaTahun) (y.toString(), y),
-    ];
+  String _periodLabel(CashTypeModel? cashType, DateTime date) {
+    if (cashType == null) return 'Pilih jenis kas';
+    if (cashType.frequency == PaymentFrequency.sekali) return 'Sekali';
+    final PaymentPeriod period = PaymentPeriod.forDate(
+      date,
+      cashType.frequency,
+    );
+    switch (cashType.frequency) {
+      case PaymentFrequency.harian:
+        return Formatters.tanggalPendekIso(PaymentPeriod.dateKey(period.start));
+      case PaymentFrequency.mingguan:
+        return '${Formatters.tanggalPendekIso(PaymentPeriod.dateKey(period.start))}'
+            ' - ${Formatters.tanggalPendekIso(PaymentPeriod.dateKey(period.end))}';
+      case PaymentFrequency.bulanan:
+        return '${Formatters.namaBulan(period.start.month)} ${period.start.year}';
+      case PaymentFrequency.semester:
+        return 'Semester ${period.start.month == 1 ? 1 : 2} ${period.start.year}';
+      case PaymentFrequency.tahunan:
+        return '${period.start.year}';
+      default:
+        return Formatters.tanggalPendekIso(PaymentPeriod.dateKey(period.start));
+    }
   }
 }
 
@@ -342,16 +369,12 @@ class _TunggakanTile extends StatelessWidget {
               Text('Bayar ', style: AppText.caption),
               Text(
                 Formatters.rupiah(item.paid),
-                style: AppText.bodySmall.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppText.bodySmall.copyWith(fontWeight: FontWeight.w700),
               ),
               Text(' / Kewajiban ', style: AppText.caption),
               Text(
                 Formatters.rupiah(item.owed),
-                style: AppText.bodySmall.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppText.bodySmall.copyWith(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               Text('Sisa ', style: AppText.caption),

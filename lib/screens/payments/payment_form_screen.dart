@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/cash_type_model.dart';
+import '../../models/payment_period.dart';
 import '../../models/payment_model.dart';
 import '../../models/student_model.dart';
 import '../../providers/cash_types_provider.dart';
@@ -135,9 +136,56 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
   int? _studentId;
   int? _cashTypeId;
   CashTypeModel? _selectedCashType;
-  int _month = DateTime.now().month;
-  int _year = DateTime.now().year;
+  DateTime _periodDate = DateTime.now();
   late DateTime _paidDate;
+
+  PaymentPeriod get _selectedPeriod => PaymentPeriod.forDate(
+    _periodDate,
+    _selectedCashType?.frequency ?? PaymentFrequency.bulanan,
+  );
+
+  String get _periodLabel {
+    final CashTypeModel? cashType = _selectedCashType;
+    if (cashType == null) return 'Pilih jenis kas terlebih dahulu';
+    if (cashType.frequency == PaymentFrequency.sekali) {
+      return 'Satu kali untuk siswa ini';
+    }
+    final PaymentPeriod period = _selectedPeriod;
+    switch (cashType.frequency) {
+      case PaymentFrequency.harian:
+        return Formatters.tanggal(period.start);
+      case PaymentFrequency.mingguan:
+        return '${Formatters.tanggal(period.start)} - '
+            '${Formatters.tanggal(period.end)}';
+      case PaymentFrequency.bulanan:
+        return '${Formatters.namaBulan(period.start.month)} ${period.start.year}';
+      case PaymentFrequency.semester:
+        return 'Semester ${period.start.month == 1 ? 1 : 2} ${period.start.year}';
+      case PaymentFrequency.tahunan:
+        return '${period.start.year}';
+      default:
+        return Formatters.tanggal(period.start);
+    }
+  }
+
+  String _frequencyLabel(String frequency) {
+    switch (frequency) {
+      case PaymentFrequency.harian:
+        return 'Harian';
+      case PaymentFrequency.mingguan:
+        return 'Mingguan';
+      case PaymentFrequency.bulanan:
+        return 'Bulanan';
+      case PaymentFrequency.semester:
+        return 'Semester';
+      case PaymentFrequency.tahunan:
+        return 'Tahunan';
+      case PaymentFrequency.sekali:
+        return 'Sekali';
+      default:
+        return frequency;
+    }
+  }
 
   PeriodStatus? _statusInfo;
   bool _isLoadingStatus = false;
@@ -185,8 +233,9 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     }
     final int studentId = _studentId!;
     final int cashTypeId = _cashTypeId!;
-    final int month = _month;
-    final int year = _year;
+    final CashTypeModel? cashType = _selectedCashType;
+    if (cashType == null) return;
+    final PaymentPeriod period = _selectedPeriod;
     setState(() {
       _statusInfo = null;
       _isLoadingStatus = true;
@@ -194,12 +243,10 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     });
     final PaymentProvider provider = context.read<PaymentProvider>();
     try {
-      final PeriodStatus info = await provider.monthlyStatus(
+      final PeriodStatus info = await provider.periodStatus(
         studentId,
-        month,
-        year,
         cashTypeId: cashTypeId,
-        paidDate: _paidDate,
+        period: period,
       );
       if (mounted && requestId == _statusRequestId) {
         setState(() {
@@ -236,6 +283,21 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
     );
     if (picked != null) {
       setState(() => _paidDate = picked);
+      _refreshStatus();
+    }
+  }
+
+  Future<void> _pickPeriodDate() async {
+    if (_selectedCashType?.frequency == PaymentFrequency.sekali) return;
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: AppDateRange.clamp(_periodDate),
+      firstDate: AppDateRange.minDate,
+      lastDate: AppDateRange.maxDate,
+      helpText: 'Pilih tanggal dalam periode kewajiban',
+    );
+    if (picked != null) {
+      setState(() => _periodDate = picked);
       _refreshStatus();
     }
   }
@@ -293,9 +355,11 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
         studentId: _studentId!,
         cashTypeId: _cashTypeId!,
         amount: int.parse(_nominalController.text.replaceAll('.', '')),
-        month: _month,
-        year: _year,
+        month: _selectedPeriod.start.month,
+        year: _selectedPeriod.start.year,
         paidDate: _paidDate.toIso8601String(),
+        periodStart: _selectedPeriod.start,
+        periodEnd: _selectedPeriod.end,
         paymentMethod: PaymentMethod.tunai,
         note: _noteController.text.trim().isEmpty
             ? null
@@ -519,54 +583,37 @@ class _PaymentFormScreenState extends State<PaymentFormScreen> {
                 ),
               const SizedBox(height: 16),
 
-              // PERIODE (BULAN & TAHUN)
-              Text('Periode Pembayaran *', style: AppText.label),
+              // PERIODE KEWAJIBAN
+              Text('Periode Kewajiban *', style: AppText.label),
               const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _month,
-                      decoration: const InputDecoration(
-                        labelText: 'Bulan',
-                        prefixIcon: Icon(Icons.calendar_month_outlined),
-                      ),
-                      items: <DropdownMenuItem<int>>[
-                        for (int m = 1; m <= 12; m++)
-                          DropdownMenuItem<int>(
-                            value: m,
-                            child: Text(Formatters.namaBulan(m)),
-                          ),
-                      ],
-                      onChanged: (int? v) {
-                        if (v != null) {
-                          setState(() => _month = v);
-                          _refreshStatus();
-                        }
-                      },
+              InkWell(
+                onTap: _selectedCashType?.frequency == PaymentFrequency.sekali
+                    ? null
+                    : _pickPeriodDate,
+                borderRadius: BorderRadius.circular(AppTheme.fieldRadius),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: _selectedCashType == null
+                        ? 'Pilih jenis kas terlebih dahulu'
+                        : _selectedCashType!.frequency ==
+                              PaymentFrequency.sekali
+                        ? 'Sekali / Custom'
+                        : 'Periode ${_frequencyLabel(_selectedCashType!.frequency)}',
+                    prefixIcon: const Icon(Icons.calendar_month_outlined),
+                    suffixIcon:
+                        _selectedCashType?.frequency == PaymentFrequency.sekali
+                        ? null
+                        : const Icon(Icons.arrow_drop_down_rounded),
+                  ),
+                  child: Text(
+                    _periodLabel,
+                    style: AppText.body.copyWith(
+                      color: _selectedCashType == null
+                          ? AppColors.textMuted
+                          : AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _year,
-                      decoration: const InputDecoration(
-                        labelText: 'Tahun',
-                        prefixIcon: Icon(Icons.event_outlined),
-                      ),
-                      items: <DropdownMenuItem<int>>[
-                        for (final int y in AppDateRange.semuaTahun)
-                          DropdownMenuItem<int>(value: y, child: Text('$y')),
-                      ],
-                      onChanged: (int? v) {
-                        if (v != null) {
-                          setState(() => _year = v);
-                          _refreshStatus();
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 16),
 

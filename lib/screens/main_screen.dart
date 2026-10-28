@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,17 +17,94 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  late final NavigationProvider _navigation;
+  late final PageController _pageController;
+  int? _programmaticTarget;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigation = context.read<NavigationProvider>();
+    _navigation.addListener(_handleNavigationChanged);
+    _pageController = PageController(initialPage: _navigation.index);
+  }
+
+  @override
+  void dispose() {
+    _navigation.removeListener(_handleNavigationChanged);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _handleNavigationChanged() {
+    if (!mounted) return;
+
+    final int index = _navigation.index;
+    if (_programmaticTarget == index ||
+        (_pageController.hasClients &&
+            _pageController.page?.round() == index)) {
+      setState(() {});
+      return;
+    }
+
+    _programmaticTarget = index;
+    setState(() {});
+    _animateToPage(index);
+  }
+
+  void _animateToPage(int index) {
+    if (!_pageController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _programmaticTarget == index) {
+          _animateToPage(index);
+        }
+      });
+      return;
+    }
+
+    unawaited(
+      _pageController
+          .animateToPage(
+            index,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+          )
+          .whenComplete(() {
+            if (mounted && _programmaticTarget == index) {
+              _programmaticTarget = null;
+            }
+          }),
+    );
+  }
+
+  void _selectPage(int index) {
+    if (_navigation.index == index) return;
+    _programmaticTarget = index;
+    _navigation.setIndex(index);
+    _animateToPage(index);
+  }
+
+  void _handlePageChanged(int index) {
+    if (_programmaticTarget != null) return;
+    _navigation.setIndex(index);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final int index = context.watch<NavigationProvider>().index;
+    final int index = _navigation.index;
 
     return Scaffold(
-      body: IndexedStack(index: index, children: widget.pages),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: _handlePageChanged,
+        children: <Widget>[
+          for (int i = 0; i < widget.pages.length; i++)
+            _KeepAlivePage(key: ValueKey<int>(i), child: widget.pages[i]),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (int i) {
-          context.read<NavigationProvider>().setIndex(i);
-        },
+        onDestinationSelected: _selectPage,
         destinations: const <NavigationDestination>[
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
@@ -46,5 +125,26 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
     );
+  }
+}
+
+class _KeepAlivePage extends StatefulWidget {
+  const _KeepAlivePage({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin<_KeepAlivePage> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
