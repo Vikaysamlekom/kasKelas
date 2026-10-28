@@ -13,7 +13,7 @@ class AboutUsScreen extends StatelessWidget {
     'Evan Hardyansyah',
     'Muhamad Reinaldi Putra Ramadhani',
     'Muhammad Susilo',
-    'Phundut Bagas Wazidan',
+    'Pundhut Bagas Wazidan',
     'Rangga Waridat',
     'Usep Saeful Adzkia',
     'Vickry Dwi Prasetyanto',
@@ -153,11 +153,7 @@ class AboutUsScreen extends StatelessWidget {
     );
   }
 
-  Widget _informationRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  Widget _informationRow({required IconData icon, required String label, required String value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 14),
       child: Row(
@@ -170,13 +166,7 @@ class AboutUsScreen extends StatelessWidget {
               children: <Widget>[
                 Text(label, style: AppText.caption),
                 const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -201,11 +191,7 @@ class AboutUsScreen extends StatelessWidget {
                     color: AppColors.navy.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(
-                    Icons.school_outlined,
-                    color: AppColors.navy,
-                    size: 25,
-                  ),
+                  child: const Icon(Icons.school_outlined, color: AppColors.navy, size: 25),
                 ),
                 const SizedBox(width: 14),
                 const Expanded(
@@ -214,10 +200,7 @@ class AboutUsScreen extends StatelessWidget {
                     children: <Widget>[
                       Text('Universitas Pamulang', style: AppText.sectionTitle),
                       SizedBox(height: 3),
-                      Text(
-                        'Kelompok pengabdian kepada masyarakat',
-                        style: AppText.caption,
-                      ),
+                      Text('Kelompok pengabdian kepada masyarakat', style: AppText.caption),
                     ],
                   ),
                 ),
@@ -236,20 +219,13 @@ class AboutUsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 14),
-            Text(
-              'Anggota kelompok',
-              style: AppText.label.copyWith(color: AppColors.textPrimary),
-            ),
+            Text('Anggota kelompok', style: AppText.label.copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: 4),
             for (int i = 0; i < _anggotaKelompok.length; i++) ...<Widget>[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 minLeadingWidth: 28,
-                leading: const Icon(
-                  Icons.person_outline_rounded,
-                  color: AppColors.navy,
-                  size: 21,
-                ),
+                leading: const Icon(Icons.person_outline_rounded, color: AppColors.navy, size: 21),
                 title: Text(
                   _anggotaKelompok[i],
                   style: AppText.bodySmall.copyWith(
@@ -260,8 +236,7 @@ class AboutUsScreen extends StatelessWidget {
                 dense: true,
                 visualDensity: const VisualDensity(vertical: -2),
               ),
-              if (i < _anggotaKelompok.length - 1)
-                const Divider(height: 1, indent: 40),
+              if (i < _anggotaKelompok.length - 1) const Divider(height: 1, indent: 40),
             ],
           ],
         ),
@@ -295,11 +270,7 @@ class AboutUsScreen extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Icon(
-                    Icons.offline_bolt_outlined,
-                    color: AppColors.teal,
-                    size: 19,
-                  ),
+                  const Icon(Icons.offline_bolt_outlined, color: AppColors.teal, size: 19),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(

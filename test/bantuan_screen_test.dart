@@ -26,11 +26,16 @@ void main() {
         .setMockMethodCallHandler(launcherChannel, null);
   });
 
-  testWidgets('Kirim Email membuka draft dengan alamat dan template bantuan', (
+  testWidgets('pesan bantuan dapat diedit tanpa menampilkan alamat email', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: BantuanScreen()));
 
+    expect(find.text('ranggawaridat@gmail.com'), findsNothing);
+    expect(find.byType(TextField), findsOneWidget);
+
+    const String editedMessage = 'Aplikasi tidak bisa menyimpan transaksi.';
+    await tester.enterText(find.byType(TextField), editedMessage);
     await tester.scrollUntilVisible(
       find.text('Kirim Email'),
       200,
@@ -47,10 +52,6 @@ void main() {
       draft.queryParameters['subject'],
       'Bantuan Aplikasi Kas Bintang Nusantara',
     );
-    expect(draft.queryParameters['body'], contains('Kendala atau pertanyaan:'));
-    expect(
-      draft.queryParameters['body'],
-      contains('Langkah yang sudah dicoba:'),
-    );
+    expect(draft.queryParameters['body'], editedMessage);
   });
 }

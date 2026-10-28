@@ -741,6 +741,73 @@ void main() {
   });
 
   group('Laporan', () {
+    test(
+      'tagihan siswa mengikuti frekuensi jenis kas pada rentang laporan',
+      () async {
+        final int kasMingguanId = await DBHelper.instance.insert(
+          DBHelper.tblCashTypes,
+          <String, Object?>{
+            'name': 'Kas Mingguan Laporan',
+            'code': 'MINGGUAN-LAPORAN',
+            'amount': 5000,
+            'frequency': PaymentFrequency.mingguan,
+            'due_day': 10,
+            'is_active': 1,
+            'created_at': now.toIso8601String(),
+          },
+        );
+        final PeriodeLaporan periode = PeriodeLaporan.dari(
+          PeriodeJenis.custom,
+          a: DateTime(2026, 3, 1),
+          b: DateTime(2026, 3, 31),
+        );
+        await pembayaran.add(
+          studentId: siswaId,
+          cashTypeId: kasBulananId,
+          amount: 10000,
+          month: 3,
+          year: 2026,
+          paidDate: '2026-03-03',
+          recordedBy: userId,
+        );
+        await pembayaran.add(
+          studentId: siswaId,
+          cashTypeId: kasMingguanId,
+          amount: 5000,
+          month: 3,
+          year: 2026,
+          paidDate: '2026-03-03',
+          periodStart: DateTime(2026, 3, 2),
+          periodEnd: DateTime(2026, 3, 8),
+          recordedBy: userId,
+        );
+
+        final List<LaporanPembayaranSiswa> rows = await laporan.pembayaranSiswa(
+          periode: periode,
+        );
+
+        expect(rows, hasLength(1));
+        expect(rows.single.tagihan, 40000);
+        expect(rows.single.bayar, 15000);
+        expect(rows.single.tunggakan, 25000);
+        expect(rows.single.status, PaymentStatus.sebagian);
+
+        final List<LaporanPembayaranSiswa> bulanan = await laporan
+            .pembayaranSiswa(periode: periode, cashTypeId: kasBulananId);
+        expect(bulanan.single.tagihan, 10000);
+        expect(bulanan.single.bayar, 10000);
+        expect(bulanan.single.tunggakan, 0);
+        expect(bulanan.single.status, PaymentStatus.lunas);
+
+        final List<LaporanPembayaranSiswa> mingguan = await laporan
+            .pembayaranSiswa(periode: periode, cashTypeId: kasMingguanId);
+        expect(mingguan.single.tagihan, 30000);
+        expect(mingguan.single.bayar, 5000);
+        expect(mingguan.single.tunggakan, 25000);
+        expect(mingguan.single.status, PaymentStatus.sebagian);
+      },
+    );
+
     test('rekap per tanggal terhitung benar', () async {
       await pembayaran.add(
         studentId: siswaId,

@@ -273,13 +273,14 @@ class PaymentRepository {
       case PaymentFrequency.mingguan:
         {
           final Set<String> weeks = <String>{};
-          DateTime cursor = start;
-          while (!cursor.isAfter(end)) {
-            final DateTime weekStart = cursor.subtract(
-              Duration(days: cursor.weekday - 1),
-            );
+          DateTime weekStart = DateTime(
+            start.year,
+            start.month,
+            start.day - (start.weekday - 1),
+          );
+          while (!weekStart.isAfter(end)) {
             weeks.add('${weekStart.year}-${weekStart.month}-${weekStart.day}');
-            cursor = cursor.add(const Duration(days: 7));
+            weekStart = weekStart.add(const Duration(days: 7));
           }
           return weeks.length;
         }

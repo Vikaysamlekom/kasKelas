@@ -4,7 +4,7 @@ class CashTypeModel {
   final String name;
   final String code;
   final int amount;
-  final String frequency; // harian / mingguan / bulanan / semester / tahunan / sekali
+  final String frequency; // harian / mingguan / bulanan
   final int dueDay;
   final String? description;
   final bool isActive;
