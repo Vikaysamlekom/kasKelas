@@ -5,7 +5,6 @@ import 'package:sqflite/sqflite.dart';
 import '../database/db_helper.dart';
 import '../models/laporan_model.dart';
 import '../models/payment_model.dart';
-import 'pembayaran_repo.dart';
 
 /// Repository perhitungan laporan keuangan:
 /// pemasukan, pengeluaran, saldo, dan pembayaran per siswa.
@@ -42,8 +41,7 @@ class LaporanRepository {
       args.add(cashTypeId);
     }
 
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT p.paid_date, p.amount, c.name AS class_name,
              m.name AS major_name, ct.name AS cash_type_name
       FROM ${DBHelper.tblPayments} p
@@ -54,9 +52,7 @@ class LaporanRepository {
       LEFT JOIN ${DBHelper.tblCashTypes} ct ON ct.id = p.cash_type_id
       WHERE ${where.join(' AND ')}
       ORDER BY p.paid_date ASC
-      ''',
-      args,
-    );
+      ''', args);
     return _kelompokkan(rows, kelompok, 'paid_date');
   }
 
@@ -80,17 +76,14 @@ class LaporanRepository {
       args.add(categoryId);
     }
 
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT expense_date, amount, e.category_id,
              c.name AS category_name
       FROM ${DBHelper.tblExpenses} e
       LEFT JOIN ${DBHelper.tblExpenseCategories} c ON c.id = e.category_id
       WHERE ${where.join(' AND ')}
       ORDER BY e.expense_date ASC
-      ''',
-      args,
-    );
+      ''', args);
     return _kelompokkanExpense(rows, kelompok);
   }
 
@@ -123,8 +116,7 @@ class LaporanRepository {
       'AND substr(expense_date, 1, 10) < ?',
       <Object?>[startKey],
     );
-    return (Sqflite.firstIntValue(masuk) ?? 0) -
-        (Sqflite.firstIntValue(keluar) ?? 0);
+    return (Sqflite.firstIntValue(masuk) ?? 0) - (Sqflite.firstIntValue(keluar) ?? 0);
   }
 
   Future<int> _sumPemasukan(PeriodeLaporan periode) async {
@@ -190,8 +182,13 @@ class LaporanRepository {
       <Object?>[periode.startKey, periode.endKey, ...args],
     );
 
-    final int kasPerBulan = await PaymentRepository().kasPerBulan();
-    final int owedPerSiswa = kasPerBulan * periode.bulanCount;
+    final List<Map<String, Object?>> cashTypes = await _db.rawQuery(
+      'SELECT id, name, amount, frequency FROM ${DBHelper.tblCashTypes} WHERE is_active = 1',
+    );
+    final int owedPerSiswa = cashTypes.fold<int>(0, (int total, Map<String, Object?> row) {
+      final int amount = (row['amount'] as int?) ?? 0;
+      return total + amount;
+    });
 
     final List<LaporanPembayaranSiswa> result = <LaporanPembayaranSiswa>[];
     for (final Map<String, Object?> r in rows) {
@@ -205,20 +202,21 @@ class LaporanRepository {
       } else {
         status = PaymentStatus.belum;
       }
-      if (statusFilter != null && statusFilter.isNotEmpty &&
-          status != statusFilter) {
+      if (statusFilter != null && statusFilter.isNotEmpty && status != statusFilter) {
         continue;
       }
-      result.add(LaporanPembayaranSiswa(
-        nis: r['nis'] as String,
-        name: r['name'] as String,
-        className: r['class_name'] as String?,
-        majorName: r['major_name'] as String?,
-        tagihan: owedPerSiswa,
-        bayar: bayar,
-        tunggakan: sisa,
-        status: status,
-      ));
+      result.add(
+        LaporanPembayaranSiswa(
+          nis: r['nis'] as String,
+          name: r['name'] as String,
+          className: r['class_name'] as String?,
+          majorName: r['major_name'] as String?,
+          tagihan: owedPerSiswa,
+          bayar: bayar,
+          tunggakan: sisa,
+          status: status,
+        ),
+      );
     }
     return result;
   }
@@ -232,15 +230,11 @@ class LaporanRepository {
     KelompokLaporan kelompok,
     String dateColumn,
   ) {
-    final LinkedHashMap<String, (int, int)> map =
-        LinkedHashMap<String, (int, int)>();
+    final LinkedHashMap<String, (int, int)> map = LinkedHashMap<String, (int, int)>();
     for (final Map<String, Object?> r in rows) {
       final String key = _keyPemasukan(r, kelompok, dateColumn);
       final (int, int) cur = map[key] ?? (0, 0);
-      map[key] = (
-        cur.$1 + 1,
-        cur.$2 + ((r['amount'] as int?) ?? 0),
-      );
+      map[key] = (cur.$1 + 1, cur.$2 + ((r['amount'] as int?) ?? 0));
     }
     return _toBaris(map, kelompok);
   }
@@ -249,8 +243,7 @@ class LaporanRepository {
     List<Map<String, Object?>> rows,
     KelompokLaporan kelompok,
   ) {
-    final LinkedHashMap<String, (int, int)> map =
-        LinkedHashMap<String, (int, int)>();
+    final LinkedHashMap<String, (int, int)> map = LinkedHashMap<String, (int, int)>();
     for (final Map<String, Object?> r in rows) {
       final String key;
       switch (kelompok) {
@@ -264,19 +257,12 @@ class LaporanRepository {
           key = (r['category_name'] as String?) ?? '-';
       }
       final (int, int) cur = map[key] ?? (0, 0);
-      map[key] = (
-        cur.$1 + 1,
-        cur.$2 + ((r['amount'] as int?) ?? 0),
-      );
+      map[key] = (cur.$1 + 1, cur.$2 + ((r['amount'] as int?) ?? 0));
     }
     return _toBaris(map, kelompok);
   }
 
-  String _keyPemasukan(
-    Map<String, Object?> r,
-    KelompokLaporan kelompok,
-    String dateColumn,
-  ) {
+  String _keyPemasukan(Map<String, Object?> r, KelompokLaporan kelompok, String dateColumn) {
     switch (kelompok) {
       case KelompokLaporan.perTanggal:
         return (r[dateColumn] as String).substring(0, 10);
@@ -293,24 +279,19 @@ class LaporanRepository {
     }
   }
 
-  List<LaporanBaris> _toBaris(
-    LinkedHashMap<String, (int, int)> map,
-    KelompokLaporan kelompok,
-  ) {
-    final bool byTanggalBulan = kelompok == KelompokLaporan.perTanggal ||
-        kelompok == KelompokLaporan.perBulan;
+  List<LaporanBaris> _toBaris(LinkedHashMap<String, (int, int)> map, KelompokLaporan kelompok) {
+    final bool byTanggalBulan =
+        kelompok == KelompokLaporan.perTanggal || kelompok == KelompokLaporan.perBulan;
     final List<String> keys = map.keys.toList();
     if (byTanggalBulan) {
       keys.sort();
     } else {
       keys.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     }
-    return keys
-        .map((String k) {
-          final (int, int) v = map[k]!;
-          return LaporanBaris(label: _labelKey(k), jumlah: v.$1, nominal: v.$2);
-        })
-        .toList();
+    return keys.map((String k) {
+      final (int, int) v = map[k]!;
+      return LaporanBaris(label: _labelKey(k), jumlah: v.$1, nominal: v.$2);
+    }).toList();
   }
 
   String _labelKey(String key) {
@@ -329,16 +310,36 @@ class LaporanRepository {
 
   String _bulanShort(int m) {
     const List<String> nama = <String>[
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return nama[m - 1];
   }
 
   String _bulanFull(int m) {
     const List<String> nama = <String>[
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return nama[m - 1];
   }

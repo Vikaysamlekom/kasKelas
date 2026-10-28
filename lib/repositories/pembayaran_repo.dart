@@ -98,9 +98,7 @@ class PaymentRepository {
       throw StateError('Jenis kas tidak ditemukan.');
     }
     // Status: lunas bila nominal >= jumlah jenis kas, selain itu sebagian.
-    final String status = amount >= cashType.amount
-        ? PaymentStatus.lunas
-        : PaymentStatus.sebagian;
+    final String status = amount >= cashType.amount ? PaymentStatus.lunas : PaymentStatus.sebagian;
 
     final String code = await nextPaymentCode(year, month);
     final String now = DateTime.now().toIso8601String();
@@ -127,11 +125,7 @@ class PaymentRepository {
   }
 
   /// Daftar pembayaran dengan filter periode (bulan/tahun) & kelas.
-  Future<List<PaymentModel>> list({
-    int? year,
-    int? month,
-    int? classId,
-  }) async {
+  Future<List<PaymentModel>> list({int? year, int? month, int? classId}) async {
     final List<String> where = <String>['1=1'];
     final List<Object?> args = <Object?>[];
     if (year != null) {
@@ -147,8 +141,7 @@ class PaymentRepository {
       args.add(classId);
     }
 
-    final List<Map<String, Object?>> rows = await _db.rawQuery(
-      '''
+    final List<Map<String, Object?>> rows = await _db.rawQuery('''
       SELECT p.*, s.name AS student_name, s.nis AS student_nis,
              c.name AS class_name, ct.name AS cash_type_name,
              u.full_name AS officer_name
@@ -159,9 +152,7 @@ class PaymentRepository {
       LEFT JOIN ${DBHelper.tblUsers} u ON u.id = p.recorded_by
       WHERE ${where.join(' AND ')}
       ORDER BY p.paid_date DESC, p.id DESC
-      ''',
-      args,
-    );
+      ''', args);
     return rows.map(PaymentModel.fromMap).toList();
   }
 
@@ -188,11 +179,7 @@ class PaymentRepository {
 
   /// Hapus permanen satu transaksi pembayaran.
   Future<void> delete(int id) async {
-    await _db.delete(
-      DBHelper.tblPayments,
-      where: 'id = ?',
-      whereArgs: <Object?>[id],
-    );
+    await _db.delete(DBHelper.tblPayments, where: 'id = ?', whereArgs: <Object?>[id]);
   }
 
   /// Batalkan (void) pembayaran → status batal + alasan wajib.
@@ -212,9 +199,7 @@ class PaymentRepository {
   /// Total nominal pembayaran pada periode tertentu.
   /// Pembayaran berstatus batal tidak ikut dihitung.
   Future<int> sumPeriod({int? year, int? month, int? classId}) async {
-    final List<String> where = <String>[
-      "status != '${PaymentStatus.batal}'",
-    ];
+    final List<String> where = <String>["status != '${PaymentStatus.batal}'"];
     final List<Object?> args = <Object?>[];
     if (year != null) {
       where.add('year = ?');
@@ -236,11 +221,86 @@ class PaymentRepository {
     return Sqflite.firstIntValue(rows) ?? 0;
   }
 
+  /// Hitung besaran kewajiban untuk satu jenis kas pada jangka waktu tertentu.
+  /// Frekuensi menentukan berapa kali nominal harus dibayar dalam rentang
+  /// tersebut. Contoh: mingguan = 1 kali per minggu, semester = 1 kali per
+  /// semester, tahunan = 1 kali per tahun.
+  int owedForCashTypeInRange(
+    CashTypeModel cashType, {
+    required DateTime start,
+    required DateTime end,
+  }) {
+    final int occurrences = _countOccurrencesForFrequency(
+      cashType.frequency,
+      start: start,
+      end: end,
+    );
+    return cashType.amount * occurrences;
+  }
+
+  int _countOccurrencesForFrequency(
+    String frequency, {
+    required DateTime start,
+    required DateTime end,
+  }) {
+    final int daySpan = end.difference(start).inDays + 1;
+    switch (frequency) {
+      case PaymentFrequency.harian:
+        return daySpan;
+      case PaymentFrequency.mingguan:
+        {
+          final Set<String> weeks = <String>{};
+          DateTime cursor = start;
+          while (!cursor.isAfter(end)) {
+            final DateTime weekStart = cursor.subtract(Duration(days: cursor.weekday - 1));
+            weeks.add('${weekStart.year}-${weekStart.month}-${weekStart.day}');
+            cursor = cursor.add(const Duration(days: 7));
+          }
+          return weeks.length;
+        }
+      case PaymentFrequency.bulanan:
+        {
+          final Set<String> months = <String>{};
+          DateTime cursor = DateTime(start.year, start.month, 1);
+          final DateTime limit = DateTime(end.year, end.month, 1);
+          while (!cursor.isAfter(limit)) {
+            months.add('${cursor.year}-${cursor.month.toString().padLeft(2, '0')}');
+            cursor = DateTime(cursor.year, cursor.month + 1, 1);
+          }
+          return months.length;
+        }
+      case PaymentFrequency.semester:
+        {
+          final Set<String> semesters = <String>{};
+          DateTime cursor = DateTime(start.year, start.month <= 6 ? 1 : 7, 1);
+          final DateTime limit = DateTime(end.year, end.month <= 6 ? 1 : 7, 1);
+          while (!cursor.isAfter(limit)) {
+            semesters.add('${cursor.year}-${cursor.month <= 6 ? '1' : '2'}');
+            cursor = DateTime(cursor.year, cursor.month + 6, 1);
+          }
+          return semesters.length;
+        }
+      case PaymentFrequency.tahunan:
+        {
+          final Set<String> years = <String>{};
+          DateTime cursor = DateTime(start.year, 1, 1);
+          final DateTime limit = DateTime(end.year, 1, 1);
+          while (!cursor.isAfter(limit)) {
+            years.add('${cursor.year}');
+            cursor = DateTime(cursor.year + 1, 1, 1);
+          }
+          return years.length;
+        }
+      case PaymentFrequency.sekali:
+      default:
+        return 1;
+    }
+  }
+
   /// Status satu siswa pada satu periode UNTUK SATU JENIS KAS TERPILIH.
-  /// Kewajiban = nominal jenis kas terpilih; total bayar hanya dihitung
-  /// dari pembayaran dengan cash_type_id yang sama (bukan sum semua kas).
-  /// Dipakai form pembayaran: tampilkan status otomatis saat siswa +
-  /// jenis kas + periode dipilih.
+  /// Untuk alur pembayaran, nominal jenis kas adalah tagihan per satu kali
+  /// pembayaran pada periode yang dipilih (mis. bulan ini). Jadi kita tidak
+  /// mengalikan nominal dengan jumlah hari/minggu/semester di bulan itu.
   Future<PeriodStatus> monthlyStatus(
     int studentId,
     int month,
@@ -248,7 +308,6 @@ class PaymentRepository {
     required int cashTypeId,
   }) async {
     final CashTypeModel? cashType = await getCashType(cashTypeId);
-    // Nominal kewajiban murni dari jenis kas yang dipilih.
     final int owed = cashType?.amount ?? 0;
     final List<Map<String, Object?>> rows = await _db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS s FROM ${DBHelper.tblPayments} '
@@ -262,7 +321,7 @@ class PaymentRepository {
 
   /// Daftar tunggakan siswa aktif pada periode terpilih untuk SATU JENIS
   /// KAS TERPILIH. Siswa tetap muncul walau belum membayar (paid = 0),
-  /// dan kewajiban = nominal jenis kas tersebut (bukan sum semua kas).
+  /// dan kewajiban mengikuti frekuensi kas yang dipilih.
   Future<List<TunggakanItem>> listTunggakan({
     int? month,
     int? year,
@@ -280,10 +339,9 @@ class PaymentRepository {
       where.add('COALESCE(s.major_id, c.major_id) = ?');
       args.add(majorId);
     }
-    // Kewajiban mengikuti nominal jenis kas yang dipilih; bila tidak ada
-    // jenis kas terpilih (belum ada kas aktif), kewajiban dianggap 0.
-    final CashTypeModel? cashType =
-        cashTypeId == null ? null : await getCashType(cashTypeId);
+    // Kewajiban pada daftar tunggakan tetap mengacu pada satu tagihan per
+    // periode yang dipilih, bukan total semua hari/minggu/semester di rentang.
+    final CashTypeModel? cashType = cashTypeId == null ? null : await getCashType(cashTypeId);
     final int owed = cashType?.amount ?? 0;
 
     final List<Map<String, Object?>> rows = await _db.rawQuery(

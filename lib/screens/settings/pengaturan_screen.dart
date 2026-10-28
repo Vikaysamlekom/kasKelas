@@ -57,7 +57,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: <Widget>[
-          _kartuUser(session, _namaBendahara ?? session.user?.fullName ?? '-'),
+          //_kartuUser(session, _namaBendahara ?? session.user?.fullName ?? '-'),
           const SizedBox(height: 16),
           _label('PENGATURAN'),
           _tile(

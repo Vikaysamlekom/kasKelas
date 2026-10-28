@@ -44,8 +44,7 @@ class JenisKasScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (BuildContext context) =>
-          _CashTypeForm(provider: provider, existing: existing),
+      builder: (BuildContext context) => _CashTypeForm(provider: provider, existing: existing),
     );
     if (saved == true) {
       provider.load();
@@ -59,7 +58,7 @@ class JenisKasScreen extends StatelessWidget {
       message: item.amount == 0
           ? 'Hapus ${item.name}?\nData tidak bisa dikembalikan.'
           : 'Apakah ${item.name} sudah pernah dipakai transaksi?\n'
-              'Jika ya, jenis kas hanya akan dinonaktifkan.',
+                'Jika ya, jenis kas hanya akan dinonaktifkan.',
       confirmLabel: 'Ya',
     );
     if (confirm != true) return;
@@ -118,8 +117,7 @@ class _JenisKasList extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: (active ? AppColors.orange : AppColors.textMuted)
-                      .withValues(alpha: 0.12),
+                  color: (active ? AppColors.orange : AppColors.textMuted).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -144,10 +142,7 @@ class _JenisKasList extends StatelessWidget {
                         if (!active) ...<Widget>[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: AppColors.danger.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
@@ -165,7 +160,7 @@ class _JenisKasList extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${Formatters.rupiah(c.amount)} · ${_frequencyLabel(c.frequency)} · jatuh tempo tgl ${c.dueDay}',
+                      '${Formatters.rupiah(c.amount)} · ${_frequencyLabel(c.frequency)} · ${_frequencyDueText(c.frequency, c.dueDay)}',
                       style: AppText.caption,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -210,6 +205,57 @@ String _frequencyLabel(String f) {
   }
 }
 
+String _frequencyDueText(String frequency, int dueDay) {
+  switch (frequency) {
+    case PaymentFrequency.harian:
+      return 'Tidak ada tanggal jatuh tempo';
+    case PaymentFrequency.mingguan:
+      return 'Periode: Senin - Sabtu';
+    case PaymentFrequency.bulanan:
+      return 'Jatuh tempo tgl $dueDay';
+    case PaymentFrequency.semester:
+      return 'Per semester';
+    case PaymentFrequency.tahunan:
+      return 'Per tahun';
+    case PaymentFrequency.sekali:
+      return 'Custom / sekali bayar';
+    default:
+      return 'Jatuh tempo tgl $dueDay';
+  }
+}
+
+bool _usesDueDay(String frequency) {
+  switch (frequency) {
+    case PaymentFrequency.harian:
+    case PaymentFrequency.mingguan:
+    case PaymentFrequency.semester:
+    case PaymentFrequency.tahunan:
+    case PaymentFrequency.sekali:
+      return false;
+    case PaymentFrequency.bulanan:
+    default:
+      return true;
+  }
+}
+
+int _defaultDueDayForFrequency(String frequency) {
+  switch (frequency) {
+    case PaymentFrequency.harian:
+      return 0;
+    case PaymentFrequency.mingguan:
+      return 0;
+    case PaymentFrequency.semester:
+      return 0;
+    case PaymentFrequency.tahunan:
+      return 0;
+    case PaymentFrequency.sekali:
+      return 0;
+    case PaymentFrequency.bulanan:
+    default:
+      return 10;
+  }
+}
+
 /// Form jenis kas (bottom sheet).
 class _CashTypeForm extends StatefulWidget {
   final CashTypesProvider provider;
@@ -237,12 +283,10 @@ class _CashTypeFormState extends State<_CashTypeForm> {
     final CashTypeModel? c = widget.existing;
     _name = TextEditingController(text: c?.name ?? '');
     _code = TextEditingController(text: c?.code ?? '');
-    _amount = TextEditingController(
-      text: c == null ? '' : Formatters.angka(c.amount),
-    );
+    _amount = TextEditingController(text: c == null ? '' : Formatters.angka(c.amount));
     _desc = TextEditingController(text: c?.description ?? '');
     _frequency = c?.frequency ?? PaymentFrequency.bulanan;
-    _dueDay = c?.dueDay ?? 10;
+    _dueDay = c?.dueDay ?? _defaultDueDayForFrequency(_frequency);
   }
 
   @override
@@ -258,10 +302,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final int amount = int.tryParse(
-          _amount.text.replaceAll('.', '').replaceAll(',', ''),
-        ) ??
-        0;
+    final int amount = int.tryParse(_amount.text.replaceAll('.', '').replaceAll(',', '')) ?? 0;
     final int? userId = context.read<SessionProvider>().user?.id;
     try {
       await widget.provider.save(
@@ -275,18 +316,15 @@ class _CashTypeFormState extends State<_CashTypeForm> {
         userId: userId,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Jenis kas tersimpan.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Jenis kas tersimpan.')));
       Navigator.of(context).pop(true);
     } catch (e) {
       // Tanpa catch, _saving tetap true sehingga tombol Simpan mati
       // permanen saat nama/kode duplikat atau database gagal.
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_pesanGagal(e))),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_pesanGagal(e))));
     }
   }
 
@@ -340,10 +378,7 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                     child: TextFormField(
                       controller: _code,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Kode *',
-                        hintText: 'BULANAN',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Kode *', hintText: 'BULANAN'),
                       validator: (String? v) {
                         if (v == null || v.trim().isEmpty) {
                           return 'Kode wajib diisi';
@@ -357,16 +392,10 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                     child: TextFormField(
                       controller: _amount,
                       keyboardType: TextInputType.number,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Nominal *',
-                        prefixText: 'Rp ',
-                      ),
+                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(labelText: 'Nominal *', prefixText: 'Rp '),
                       validator: (String? v) {
-                        final String clean =
-                            (v ?? '').replaceAll('.', '').replaceAll(',', '');
+                        final String clean = (v ?? '').replaceAll('.', '').replaceAll(',', '');
                         final int amount = int.tryParse(clean) ?? 0;
                         return amount > 0 ? null : 'Nominal wajib diisi';
                       },
@@ -379,68 +408,69 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                 initialValue: _frequency,
                 decoration: const InputDecoration(labelText: 'Frekuensi *'),
                 items: const <DropdownMenuItem<String>>[
-                  DropdownMenuItem<String>(
-                    value: PaymentFrequency.harian,
-                    child: Text('Harian'),
-                  ),
+                  DropdownMenuItem<String>(value: PaymentFrequency.harian, child: Text('Harian')),
                   DropdownMenuItem<String>(
                     value: PaymentFrequency.mingguan,
                     child: Text('Mingguan'),
                   ),
-                  DropdownMenuItem<String>(
-                    value: PaymentFrequency.bulanan,
-                    child: Text('Bulanan'),
-                  ),
+                  DropdownMenuItem<String>(value: PaymentFrequency.bulanan, child: Text('Bulanan')),
                   DropdownMenuItem<String>(
                     value: PaymentFrequency.semester,
                     child: Text('Semester'),
                   ),
-                  DropdownMenuItem<String>(
-                    value: PaymentFrequency.tahunan,
-                    child: Text('Tahunan'),
-                  ),
+                  DropdownMenuItem<String>(value: PaymentFrequency.tahunan, child: Text('Tahunan')),
                   DropdownMenuItem<String>(
                     value: PaymentFrequency.sekali,
                     child: Text('Sekali / Custom'),
                   ),
                 ],
-                onChanged: (String? v) =>
-                    setState(() => _frequency = v ?? PaymentFrequency.bulanan),
+                onChanged: (String? v) {
+                  final String next = v ?? PaymentFrequency.bulanan;
+                  setState(() {
+                    _frequency = next;
+                    if (!_usesDueDay(next)) {
+                      _dueDay = 0;
+                    } else if (_dueDay <= 0 || _dueDay > 31) {
+                      _dueDay = _defaultDueDayForFrequency(next);
+                    }
+                  });
+                },
               ),
               const SizedBox(height: 14),
-              TextFormField(
-                initialValue: _dueDay.toString(),
-                keyboardType: TextInputType.number,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Jatuh Tempo Tiap Tanggal *',
-                  prefixIcon: Icon(Icons.event_outlined),
+              if (_usesDueDay(_frequency))
+                TextFormField(
+                  initialValue: _dueDay.toString(),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                    labelText: 'Jatuh Tempo Tiap Tanggal *',
+                    prefixIcon: Icon(Icons.event_outlined),
+                  ),
+                  validator: (String? v) {
+                    final int day = int.tryParse(v ?? '') ?? 0;
+                    return (day >= 1 && day <= 31) ? null : 'Tanggal 1-31';
+                  },
+                  onChanged: (String? v) {
+                    _dueDay = int.tryParse(v ?? '') ?? _dueDay;
+                  },
+                )
+              else
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Jatuh Tempo',
+                    prefixIcon: Icon(Icons.event_outlined),
+                  ),
+                  child: Text(_frequencyDueText(_frequency, _dueDay), style: AppText.body),
                 ),
-                validator: (String? v) {
-                  final int day = int.tryParse(v ?? '') ?? 0;
-                  return (day >= 1 && day <= 31) ? null : 'Tanggal 1-31';
-                },
-                onChanged: (String? v) {
-                  _dueDay = int.tryParse(v ?? '') ?? _dueDay;
-                },
-              ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _desc,
-                decoration: const InputDecoration(
-                  labelText: 'Deskripsi',
-                  hintText: 'Opsional',
-                ),
+                decoration: const InputDecoration(labelText: 'Deskripsi', hintText: 'Opsional'),
                 maxLines: 2,
               ),
               const SizedBox(height: 20),
               _saving
-                  ? const SizedBox(
-                      height: 52,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
+                  ? const SizedBox(height: 52, child: Center(child: CircularProgressIndicator()))
                   : FilledButton(onPressed: _save, child: const Text('Simpan')),
               const SizedBox(height: 8),
             ],
