@@ -170,6 +170,25 @@ void main() {
   // ============================================================
 
   group('Tombol Simpan Jenis Kas', () {
+    smokeTest('frekuensi hanya menyediakan harian, mingguan, bulanan', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(wrap(const JenisKasScreen()));
+      await tick(tester);
+      await tester.tap(find.byType(FloatingActionButton));
+      await tick(tester);
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tick(tester);
+
+      expect(find.text('Harian'), findsOneWidget);
+      expect(find.text('Mingguan'), findsOneWidget);
+      expect(find.text('Bulanan'), findsWidgets);
+      expect(find.text('Semester'), findsNothing);
+      expect(find.text('Tahunan'), findsNothing);
+      expect(find.text('Sekali / Custom'), findsNothing);
+    });
+
     smokeTest('mengirim data form ke provider', (WidgetTester tester) async {
       final _RekamCashTypes p = cashTypes as _RekamCashTypes;
       await tester.pumpWidget(wrap(const JenisKasScreen()));

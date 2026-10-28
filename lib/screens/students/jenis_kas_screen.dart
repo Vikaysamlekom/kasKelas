@@ -285,8 +285,17 @@ class _CashTypeFormState extends State<_CashTypeForm> {
     _code = TextEditingController(text: c?.code ?? '');
     _amount = TextEditingController(text: c == null ? '' : Formatters.angka(c.amount));
     _desc = TextEditingController(text: c?.description ?? '');
-    _frequency = c?.frequency ?? PaymentFrequency.bulanan;
+    _frequency = switch (c?.frequency) {
+      PaymentFrequency.harian => PaymentFrequency.harian,
+      PaymentFrequency.mingguan => PaymentFrequency.mingguan,
+      PaymentFrequency.bulanan => PaymentFrequency.bulanan,
+      _ => PaymentFrequency.bulanan,
+    };
     _dueDay = c?.dueDay ?? _defaultDueDayForFrequency(_frequency);
+    if (_frequency == PaymentFrequency.bulanan &&
+        (_dueDay < 1 || _dueDay > 31)) {
+      _dueDay = _defaultDueDayForFrequency(_frequency);
+    }
   }
 
   @override
@@ -408,20 +417,17 @@ class _CashTypeFormState extends State<_CashTypeForm> {
                 initialValue: _frequency,
                 decoration: const InputDecoration(labelText: 'Frekuensi *'),
                 items: const <DropdownMenuItem<String>>[
-                  DropdownMenuItem<String>(value: PaymentFrequency.harian, child: Text('Harian')),
+                  DropdownMenuItem<String>(
+                    value: PaymentFrequency.harian,
+                    child: Text('Harian'),
+                  ),
                   DropdownMenuItem<String>(
                     value: PaymentFrequency.mingguan,
                     child: Text('Mingguan'),
                   ),
-                  DropdownMenuItem<String>(value: PaymentFrequency.bulanan, child: Text('Bulanan')),
                   DropdownMenuItem<String>(
-                    value: PaymentFrequency.semester,
-                    child: Text('Semester'),
-                  ),
-                  DropdownMenuItem<String>(value: PaymentFrequency.tahunan, child: Text('Tahunan')),
-                  DropdownMenuItem<String>(
-                    value: PaymentFrequency.sekali,
-                    child: Text('Sekali / Custom'),
+                    value: PaymentFrequency.bulanan,
+                    child: Text('Bulanan'),
                   ),
                 ],
                 onChanged: (String? v) {
