@@ -23,7 +23,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   // Total durasi animasi.
-  static const Duration _durasi = Duration(milliseconds: 1200);
+  static const Duration _durasi = Duration(milliseconds: 2400);
 
   // Controller animasi utama.
   late final AnimationController _controller = AnimationController(vsync: this, duration: _durasi)
