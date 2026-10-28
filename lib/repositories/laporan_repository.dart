@@ -3,13 +3,16 @@ import 'dart:collection';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/db_helper.dart';
+import '../models/cash_type_model.dart';
 import '../models/laporan_model.dart';
 import '../models/payment_model.dart';
+import 'pembayaran_repo.dart';
 
 /// Repository perhitungan laporan keuangan:
 /// pemasukan, pengeluaran, saldo, dan pembayaran per siswa.
 class LaporanRepository {
   final DBHelper _db = DBHelper.instance;
+  final PaymentRepository _paymentRepository = PaymentRepository();
 
   // ------------------------------------------------------------
   // PEMASUKAN
@@ -182,13 +185,22 @@ class LaporanRepository {
       <Object?>[periode.startKey, periode.endKey, ...args],
     );
 
-    final List<Map<String, Object?>> cashTypes = await _db.rawQuery(
-      'SELECT id, name, amount, frequency FROM ${DBHelper.tblCashTypes} WHERE is_active = 1',
+    final List<Map<String, Object?>> cashTypeRows = await _db.rawQuery(
+      'SELECT * FROM ${DBHelper.tblCashTypes} WHERE is_active = 1',
     );
-    final int owedPerSiswa = cashTypes.fold<int>(0, (int total, Map<String, Object?> row) {
-      final int amount = (row['amount'] as int?) ?? 0;
-      return total + amount;
-    });
+    final List<CashTypeModel> cashTypes = cashTypeRows
+        .map(CashTypeModel.fromMap)
+        .toList();
+    final int owedPerSiswa = cashTypes.fold<int>(
+      0,
+      (int total, CashTypeModel cashType) =>
+          total +
+          _paymentRepository.owedForCashTypeInRange(
+            cashType,
+            start: periode.start,
+            end: periode.end,
+          ),
+    );
 
     final List<LaporanPembayaranSiswa> result = <LaporanPembayaranSiswa>[];
     for (final Map<String, Object?> r in rows) {

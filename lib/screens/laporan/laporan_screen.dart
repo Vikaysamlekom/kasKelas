@@ -51,6 +51,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
 
   bool _loading = false;
   bool _processing = false;
+  int _computeRequestId = 0;
   String? _lastFile;
   String? _error;
   SchoolProfileModel? _profil;
@@ -66,8 +67,12 @@ class _LaporanScreenState extends State<LaporanScreen> {
   }
 
   Future<void> _loadProfil() async {
-    final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
-    if (mounted && profil != null) setState(() => _profil = profil);
+    try {
+      final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
+      if (mounted && profil != null) setState(() => _profil = profil);
+    } catch (e) {
+      if (mounted) _snack('Gagal memuat profil sekolah: $e');
+    }
   }
 
   void _loadOptions() {
@@ -80,6 +85,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
       PeriodeLaporan.dari(_periode, a: _customStart, b: _customEnd);
 
   Future<void> _compute() async {
+    final int requestId = ++_computeRequestId;
     setState(() {
       _loading = true;
       _error = null;
@@ -88,7 +94,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
       final PeriodeLaporan p = _periodeSekarang();
       if (_jenis == _JenisLaporan.saldo) {
         final LaporanSaldo s = await _repo.saldo(periode: p);
-        if (mounted) {
+        if (mounted && requestId == _computeRequestId) {
           setState(() {
             _saldo = s;
             _baris = const <LaporanBaris>[];
@@ -102,7 +108,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           majorId: _filter.majorId,
           statusFilter: _filter.statusSiswa,
         );
-        if (mounted) {
+        if (mounted && requestId == _computeRequestId) {
           setState(() {
             _siswa = r;
             _baris = const <LaporanBaris>[];
@@ -124,7 +130,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                 kelompok: _kelompok,
                 categoryId: _filter.categoryId,
               );
-        if (mounted) {
+        if (mounted && requestId == _computeRequestId) {
           setState(() {
             _baris = r;
             _saldo = null;
@@ -133,9 +139,13 @@ class _LaporanScreenState extends State<LaporanScreen> {
         }
       }
     } catch (e) {
-      if (mounted) setState(() => _error = 'Gagal memuat laporan: $e');
+      if (mounted && requestId == _computeRequestId) {
+        setState(() => _error = 'Gagal memuat laporan: $e');
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && requestId == _computeRequestId) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -238,35 +248,65 @@ class _LaporanScreenState extends State<LaporanScreen> {
     }
   }
 
+  List<List<String>> get _dataPdf {
+    if (_jenis == _JenisLaporan.pemasukan ||
+        _jenis == _JenisLaporan.pengeluaran) {
+      return _baris
+          .map(
+            (LaporanBaris row) => <String>[
+              row.label,
+              '${row.jumlah}',
+              Formatters.rupiah(row.nominal),
+            ],
+          )
+          .toList();
+    }
+    if (_jenis == _JenisLaporan.siswa) {
+      return _siswa
+          .map(
+            (LaporanPembayaranSiswa row) => <String>[
+              row.nis,
+              row.name,
+              row.className ?? '-',
+              row.majorName ?? '-',
+              Formatters.rupiah(row.tagihan),
+              Formatters.rupiah(row.bayar),
+              Formatters.rupiah(row.tunggakan),
+              PaymentStatus.label(row.status),
+            ],
+          )
+          .toList();
+    }
+    return _dataBaris;
+  }
+
   Future<void> _exportPdf() async {
-    final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
     await _export(
       ext: 'pdf',
       builder: () => ExportService.reportPdf(
         judul: _judul,
         periodeLabel: _periodeSekarang().label,
-        bendahara: _bendahara(profil),
+        bendahara: _bendahara(_profil),
         kolom: _kolom,
-        baris: _dataBaris,
+        baris: _dataPdf,
         ringkasan: _ringkasan,
-        sekolah: _sekolah(profil),
+        sekolah: _sekolah(_profil),
       ),
     );
   }
 
   Future<void> _exportCsv() async {
-    final SchoolProfileModel? profil = await SchoolProfileRepository().getProfile();
     await _export(
       ext: 'csv',
       builder: () => Future<String>.value(
         ExportService.reportCsv(
           judul: _judul,
           periodeLabel: _periodeSekarang().label,
-          bendahara: _bendahara(profil),
+          bendahara: _bendahara(_profil),
           kolom: _kolom,
           baris: _dataBaris,
           ringkasan: _ringkasan,
-          sekolah: _sekolah(profil),
+          sekolah: _sekolah(_profil),
         ),
       ),
     );
@@ -463,7 +503,9 @@ class _LaporanScreenState extends State<LaporanScreen> {
           children: <Widget>[
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _processing ? null : _exportPdf,
+                onPressed: _processing || _loading || _error != null
+                    ? null
+                    : _exportPdf,
                 icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
                 label: const Text('Export PDF'),
               ),
@@ -471,7 +513,9 @@ class _LaporanScreenState extends State<LaporanScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: _processing ? null : _exportCsv,
+                onPressed: _processing || _loading || _error != null
+                    ? null
+                    : _exportCsv,
                 icon: const Icon(Icons.table_view_outlined, size: 18),
                 label: const Text('Export CSV'),
               ),
@@ -544,8 +588,14 @@ class _LaporanScreenState extends State<LaporanScreen> {
     setState(() {
       if (isStart) {
         _customStart = picked;
+        if (_customEnd != null && _customEnd!.isBefore(picked)) {
+          _customEnd = picked;
+        }
       } else {
         _customEnd = picked;
+        if (_customStart != null && _customStart!.isAfter(picked)) {
+          _customStart = picked;
+        }
       }
     });
     _compute();
@@ -773,14 +823,14 @@ class _FilterSection extends StatelessWidget {
                 FilterDropdown<KelompokLaporan>(
                   label: 'Kelompok',
                   value: kelompok,
-                  items: _kelompokItems,
+                  items: _kelompokItems(jenis),
                   onChanged: (KelompokLaporan? v) {
                     if (v != null) onKelompok(v);
                   },
                 ),
                 const SizedBox(width: 8),
               ],
-              if (jenis != _JenisLaporan.pengeluaran && jenis != _JenisLaporan.siswa) ...<Widget>[
+              if (jenis != _JenisLaporan.pengeluaran) ...<Widget>[
                 FilterDropdown<int>(
                   label: 'Kelas',
                   value: filter.classId,
@@ -844,16 +894,20 @@ class _FilterSection extends StatelessWidget {
     );
   }
 
-  static final List<(String, KelompokLaporan)> _kelompokItems = _build();
-
-  static List<(String, KelompokLaporan)> _build() {
+  static List<(String, KelompokLaporan)> _kelompokItems(_JenisLaporan jenis) {
+    if (jenis == _JenisLaporan.pengeluaran) {
+      return <(String, KelompokLaporan)>[
+        ('Per Tanggal', KelompokLaporan.perTanggal),
+        ('Per Bulan', KelompokLaporan.perBulan),
+        ('Per Kategori', KelompokLaporan.perKategori),
+      ];
+    }
     return <(String, KelompokLaporan)>[
       ('Per Tanggal', KelompokLaporan.perTanggal),
       ('Per Bulan', KelompokLaporan.perBulan),
       ('Per Kelas', KelompokLaporan.perKelas),
       ('Per Jurusan', KelompokLaporan.perJurusan),
       ('Per Jenis Kas', KelompokLaporan.perJenisKas),
-      ('Per Kategori', KelompokLaporan.perKategori),
     ];
   }
 
@@ -1107,6 +1161,7 @@ class _SiswaContent extends StatelessWidget {
               DataColumn(label: Text('NIS', style: AppText.label)),
               DataColumn(label: Text('Nama', style: AppText.label)),
               DataColumn(label: Text('Kelas', style: AppText.label)),
+              DataColumn(label: Text('Jurusan', style: AppText.label)),
               DataColumn(label: Text('Tagihan', style: AppText.label)),
               DataColumn(label: Text('Bayar', style: AppText.label)),
               DataColumn(label: Text('Tunggakan', style: AppText.label)),
@@ -1124,6 +1179,7 @@ class _SiswaContent extends StatelessWidget {
                         ),
                       ),
                       DataCell(Text(s.className ?? '-', style: AppText.bodySmall)),
+                      DataCell(Text(s.majorName ?? '-', style: AppText.bodySmall)),
                       DataCell(Text(Formatters.rupiah(s.tagihan), style: AppText.bodySmall)),
                       DataCell(Text(Formatters.rupiah(s.bayar), style: AppText.bodySmall)),
                       DataCell(
