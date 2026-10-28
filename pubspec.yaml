@@ -3,7 +3,7 @@ description: "Aplikasi pengelolaan kas siswa SMK Bintang Nusantara (offline)."
 publish_to: 'none'
 
 # Format: versionName+versionCode. Naikkan keduanya setiap rilis Android.
-version: 1.0.9+6
+version: 1.1.0+6
 
 environment:
   sdk: ^3.13.4

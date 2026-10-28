@@ -6,7 +6,7 @@ class AppConstants {
 
   static const String appName = 'Kas Bintang Nusantara';
   static const String appTagline = 'Bendahara SMK Bintang Nusantara';
-  static const String appVersion = '1.0.9';
+  static const String appVersion = '1.1.0';
 
   // Nama & versi database
   static const String dbName = 'kas_bintang_nusantara.db';
