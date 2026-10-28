@@ -442,7 +442,7 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
                 icon: const Icon(Icons.photo_camera_outlined, size: 18),
                 label: const Text('Kamera'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => _pickLogo(ImageSource.gallery),
                 icon: const Icon(Icons.photo_library_outlined, size: 18),
