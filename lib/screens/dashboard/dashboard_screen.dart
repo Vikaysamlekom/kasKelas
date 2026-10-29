@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +9,7 @@ import '../../providers/navigation_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../repositories/dashboard_repository.dart';
 import '../../repositories/school_profile_repo.dart';
+import '../../utils/school_logo_image.dart';
 import '../pengeluaran/pengeluaran_screen.dart';
 import '../settings/profil_sekolah_screen.dart';
 import '../transactions/riwayat_transaksi_screen.dart';
@@ -204,8 +203,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       clipBehavior: Clip.antiAlias,
       child: path == null || path.isEmpty
           ? Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy)
-          : Image.file(
-              File(path),
+          : Image(
+              image: schoolLogoImageProvider(path),
               fit: BoxFit.cover,
               errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
                   Icon(Icons.school_rounded, size: size * 0.58, color: AppColors.navy),

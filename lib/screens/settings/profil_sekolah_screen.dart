@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -13,6 +15,7 @@ import '../../database/db_helper.dart';
 import '../../models/school_profile_model.dart';
 import '../../providers/session_provider.dart';
 import '../../repositories/school_profile_repo.dart';
+import '../../utils/school_logo_image.dart';
 import '../../widgets/confirm_dialog.dart';
 
 /// Layar Profil Sekolah: nama, NPSN, alamat, telepon, email, kepala sekolah,
@@ -122,8 +125,20 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
     }
     if (picked == null || !mounted) return;
 
-    // Salin ke Documents/profil agar file tetap ada walau cache dibersihkan.
     try {
+      if (kIsWeb) {
+        final String mimeType = picked.mimeType ?? 'image/png';
+        final String dataUrl =
+            'data:$mimeType;base64,${base64Encode(await picked.readAsBytes())}';
+        if (!mounted) return;
+        setState(() {
+          _logoPath = dataUrl;
+          _dirty = true;
+        });
+        return;
+      }
+
+      // Salin ke Documents/profil agar file tetap ada walau cache dibersihkan.
       final Directory docs = await getApplicationDocumentsDirectory();
       final Directory dir = Directory(p.join(docs.path, 'profil'));
       if (!dir.existsSync()) {
@@ -400,8 +415,8 @@ class _ProfilSekolahScreenState extends State<ProfilSekolahScreen> {
             clipBehavior: Clip.antiAlias,
             child: _logoPath == null
                 ? const Icon(Icons.school_rounded, size: 48, color: AppColors.textMuted)
-                : Image.file(
-                    File(_logoPath!),
+                : Image(
+                    image: schoolLogoImageProvider(_logoPath!),
                     fit: BoxFit.cover,
                     errorBuilder: (BuildContext _, Object _, StackTrace? _) => const Icon(
                       Icons.broken_image_rounded,
