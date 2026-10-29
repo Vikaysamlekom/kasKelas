@@ -78,6 +78,21 @@ flutter test
 flutter run
 ```
 
+### 🌐 Menjalankan versi web
+
+```bash
+flutter run -d edge
+```
+
+Database versi web menggunakan SQLite WebAssembly yang disimpan di IndexedDB
+browser. Datanya terpisah dari database Android dan terikat pada origin (domain
+dan port) yang dipakai untuk menjalankan aplikasi. Jika memperbarui dependensi
+SQLite web, regenerasi aset worker dan WebAssembly dengan:
+
+```bash
+dart run sqflite_common_ffi_web:setup
+```
+
 ### 📦 Build APK
 
 ```bash
