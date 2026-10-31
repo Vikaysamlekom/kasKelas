@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import '../core/app_error.dart';
 import '../core/constants.dart';
@@ -59,8 +60,14 @@ class DBHelper {
   Future<Database> get database async => _db ??= await _openDatabase();
 
   Future<Database> _openDatabase() async {
-    final String dbPath = await getDatabasesPath();
-    final String path = p.join(dbPath, _dbFileName);
+    final String path;
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+      path = _dbFileName;
+    } else {
+      final String dbPath = await getDatabasesPath();
+      path = p.join(dbPath, _dbFileName);
+    }
 
     return openDatabase(
       path,

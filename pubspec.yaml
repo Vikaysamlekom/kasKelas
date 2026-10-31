@@ -39,6 +39,7 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.3
+  sqflite_common_ffi_web: ^1.2.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4

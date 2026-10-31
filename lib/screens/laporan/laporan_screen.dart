@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +55,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
   bool _processing = false;
   int _computeRequestId = 0;
   String? _lastFile;
+  List<int>? _lastExportBytes;
+  String? _lastExportName;
   String? _error;
   SchoolProfileModel? _profil;
 
@@ -328,12 +332,26 @@ class _LaporanScreenState extends State<LaporanScreen> {
     setState(() => _processing = true);
     try {
       final dynamic content = await builder();
+      final String name = 'laporan_${_slug(_judul)}_${_timeStamp()}.$ext';
+      if (kIsWeb) {
+        final List<int> bytes = content is List<int>
+            ? content
+            : utf8.encode(content as String);
+        setState(() {
+          _lastFile = null;
+          _lastExportBytes = bytes;
+          _lastExportName = name;
+        });
+        await _shareBytes(bytes, name);
+        if (mounted) _snack('File laporan siap diunduh atau dibagikan: $name');
+        return;
+      }
+
       final Directory dir = await getApplicationDocumentsDirectory();
       final Directory folder = Directory('${dir.path}/laporan');
       if (!await folder.exists()) {
         await folder.create(recursive: true);
       }
-      final String name = 'laporan_${_slug(_judul)}_${_timeStamp()}.$ext';
       final File file = File('${folder.path}/$name');
       if (content is List<int>) {
         await file.writeAsBytes(content, flush: true);
@@ -353,6 +371,17 @@ class _LaporanScreenState extends State<LaporanScreen> {
   }
 
   Future<void> _shareLast() async {
+    if (kIsWeb) {
+      final List<int>? bytes = _lastExportBytes;
+      final String? name = _lastExportName;
+      if (bytes == null || name == null) {
+        _snack('Belum ada file hasil ekspor. Tekan Export PDF/CSV.');
+        return;
+      }
+      await _shareBytes(bytes, name);
+      return;
+    }
+
     final String? path = _lastFile;
     if (path == null) {
       _snack('Belum ada file hasil ekspor. Tekan Export PDF/CSV.');
@@ -377,6 +406,22 @@ class _LaporanScreenState extends State<LaporanScreen> {
                 : 'text/csv',
           ),
         ],
+        text: '$_judul - ${_sekolah()}',
+        downloadFallbackEnabled: true,
+      ),
+    );
+  }
+
+  Future<void> _shareBytes(List<int> bytes, String name) async {
+    await SharePlus.instance.share(
+      ShareParams(
+        files: <XFile>[
+          XFile.fromData(
+            Uint8List.fromList(bytes),
+            mimeType: name.endsWith('.pdf') ? 'application/pdf' : 'text/csv',
+          ),
+        ],
+        fileNameOverrides: <String>[name],
         text: '$_judul - ${_sekolah()}',
         downloadFallbackEnabled: true,
       ),
