@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kas_bintang_nusantara/core/app_error.dart';
+import 'package:kas_bintang_nusantara/database/db_helper.dart';
 import 'package:kas_bintang_nusantara/services/backup_service.dart';
 import 'package:path/path.dart' as p;
 
@@ -34,25 +36,35 @@ void main() {
       final String target = p.join(dir.path, BackupService.fileNameFor(now));
       await File(target).writeAsBytes(<int>[1, 2, 3]);
 
-      final String hasil =
-          await BackupService.uniqueBackupPath(dir, target, now);
+      final String hasil = await BackupService.uniqueBackupPath(
+        dir,
+        target,
+        now,
+      );
 
       expect(hasil, isNot(target));
-      expect(p.basename(hasil), 'backup_kas_bintang_nusantara_2026-03-09_103015.db');
+      expect(
+        p.basename(hasil),
+        'backup_kas_bintang_nusantara_2026-03-09_103015.db',
+      );
       // File lama tetap utuh.
       expect(await File(target).readAsBytes(), <int>[1, 2, 3]);
     });
 
     test('menambah nomor urut bila suffix waktu juga bentrok', () async {
       final DateTime now = DateTime(2026, 3, 9, 10, 30, 15);
-      final String base =
-          p.basenameWithoutExtension(BackupService.fileNameFor(now));
+      final String base = p.basenameWithoutExtension(
+        BackupService.fileNameFor(now),
+      );
       final String target = p.join(dir.path, BackupService.fileNameFor(now));
       await File(target).writeAsBytes(<int>[0]);
       await File(p.join(dir.path, '${base}_103015.db')).writeAsBytes(<int>[0]);
 
-      final String hasil =
-          await BackupService.uniqueBackupPath(dir, target, now);
+      final String hasil = await BackupService.uniqueBackupPath(
+        dir,
+        target,
+        now,
+      );
 
       expect(p.basename(hasil), '${base}_103015_2.db');
     });
@@ -63,9 +75,128 @@ void main() {
       expect(AutoBackupFrequency.harian.prefValue, 'daily');
       expect(AutoBackupFrequency.mingguan.prefValue, 'weekly');
       expect(AutoBackupFrequency.mati.prefValue, 'off');
-      expect(AutoBackupFrequency.fromPref('weekly'),
-          AutoBackupFrequency.mingguan);
+      expect(
+        AutoBackupFrequency.fromPref('weekly'),
+        AutoBackupFrequency.mingguan,
+      );
       expect(AutoBackupFrequency.fromPref(null), AutoBackupFrequency.mati);
+    });
+  });
+
+  group('BackupService.isBackupDue', () {
+    final DateTime now = DateTime(2026, 11, 5, 12);
+
+    test('belum ada snapshot berarti backup perlu dijalankan', () {
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.harian,
+          lastBackup: null,
+          now: now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('frekuensi harian hanya sekali pada tanggal yang sama', () {
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.harian,
+          lastBackup: '2026-11-05',
+          now: now,
+        ),
+        isFalse,
+      );
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.harian,
+          lastBackup: '2026-11-04',
+          now: now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('frekuensi mingguan dijalankan kembali setelah tujuh hari', () {
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.mingguan,
+          lastBackup: '2026-10-30',
+          now: now,
+        ),
+        isFalse,
+      );
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.mingguan,
+          lastBackup: '2026-10-29',
+          now: now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('frekuensi mati tidak membuat backup', () {
+      expect(
+        BackupService.isBackupDue(
+          frequency: AutoBackupFrequency.mati,
+          lastBackup: null,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('BackupService.validateWebBackupTables', () {
+    const Set<String> existingTables = <String>{
+      DBHelper.tblUsers,
+      DBHelper.tblStudents,
+    };
+
+    test('menerima backup yang memuat semua tabel yang dikenal', () {
+      expect(
+        () => BackupService.validateWebBackupTables(
+          backupTables: existingTables,
+          existingTables: existingTables,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('menolak backup tanpa tabel pengguna', () {
+      expect(
+        () => BackupService.validateWebBackupTables(
+          backupTables: <String>{DBHelper.tblStudents},
+          existingTables: existingTables,
+        ),
+        throwsA(isA<AppException>()),
+      );
+    });
+
+    test('menolak backup yang tidak memuat semua tabel', () {
+      expect(
+        () => BackupService.validateWebBackupTables(
+          backupTables: <String>{DBHelper.tblUsers},
+          existingTables: existingTables,
+        ),
+        throwsA(
+          isA<AppException>().having(
+            (AppException error) => error.message,
+            'message',
+            contains(DBHelper.tblStudents),
+          ),
+        ),
+      );
+    });
+
+    test('menolak tabel yang tidak dikenal', () {
+      expect(
+        () => BackupService.validateWebBackupTables(
+          backupTables: <String>{...existingTables, 'unknown_table'},
+          existingTables: existingTables,
+        ),
+        throwsA(isA<AppException>()),
+      );
     });
   });
 }

@@ -56,7 +56,8 @@ Future<void> main() async {
     debugPrint('Gagal inisialisasi database: $e\n$stack');
   }
 
-  // Backup otomatis (harian/mingguan) bila sudah Due.
+  // Backup otomatis web disimpan sebagai snapshot di IndexedDB. Browser
+  // tidak bisa mengunduh file sendiri, sehingga file tetap diunduh manual.
   unawaited(BackupService.instance.runScheduledBackupIfDue());
 
   runApp(const KasBintangNusantaraApp());
@@ -70,14 +71,12 @@ class KasBintangNusantaraApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<SessionProvider>(
-          create: (_) => SessionProvider(
-            authRepository: AuthRepository(),
-          )..restoreSession(),
+          create: (_) =>
+              SessionProvider(authRepository: AuthRepository())
+                ..restoreSession(),
         ),
         ChangeNotifierProvider<DashboardProvider>(
-          create: (_) => DashboardProvider(
-            repository: DashboardRepository(),
-          ),
+          create: (_) => DashboardProvider(repository: DashboardRepository()),
         ),
         ChangeNotifierProvider<StudentsProvider>(
           create: (_) => StudentsProvider(
@@ -86,14 +85,11 @@ class KasBintangNusantaraApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider<ClassesProvider>(
-          create: (_) => ClassesProvider(
-            classRepository: ClassRepository(),
-          ),
+          create: (_) => ClassesProvider(classRepository: ClassRepository()),
         ),
         ChangeNotifierProvider<CashTypesProvider>(
-          create: (_) => CashTypesProvider(
-            cashTypeRepository: CashTypeRepository(),
-          ),
+          create: (_) =>
+              CashTypesProvider(cashTypeRepository: CashTypeRepository()),
         ),
         ChangeNotifierProvider<PaymentProvider>(
           create: (_) => PaymentProvider(

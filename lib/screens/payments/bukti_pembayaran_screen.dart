@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -16,6 +16,7 @@ import '../../models/school_profile_model.dart';
 import '../../providers/payment_provider.dart';
 import '../../repositories/school_profile_repo.dart';
 import '../../services/pdf_service.dart';
+import '../../utils/file_export.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/empty_state.dart';
 
@@ -84,14 +85,24 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
     setState(() => _processing = true);
     try {
       final Uint8List bytes = await _buildPdf();
+      final String name = PdfService.fileName(_payment!);
+      if (kIsWeb) {
+        await shareOrDownloadBytes(
+          bytes: bytes,
+          fileName: name,
+          mimeType: 'application/pdf',
+          text: 'Bukti Pembayaran Kas - ${_payment!.paymentCode}',
+        );
+        if (mounted) _snack('PDF siap diunduh: $name');
+        return;
+      }
+
       final Directory dir = await getApplicationDocumentsDirectory();
       final Directory folder = Directory('${dir.path}/bukti');
       if (!await folder.exists()) {
         await folder.create(recursive: true);
       }
-      final File file = File(
-        '${folder.path}/${PdfService.fileName(_payment!)}',
-      );
+      final File file = File('${folder.path}/$name');
       await file.writeAsBytes(bytes, flush: true);
       if (mounted) {
         _snack('PDF tersimpan:\n${file.path}');
@@ -107,8 +118,19 @@ class _BuktiPembayaranScreenState extends State<BuktiPembayaranScreen> {
     setState(() => _processing = true);
     try {
       final Uint8List bytes = await _buildPdf();
+      final String name = PdfService.fileName(_payment!);
+      if (kIsWeb) {
+        await shareOrDownloadBytes(
+          bytes: bytes,
+          fileName: name,
+          mimeType: 'application/pdf',
+          text: 'Bukti Pembayaran Kas - ${_payment!.paymentCode}',
+        );
+        return;
+      }
+
       final Directory dir = await getTemporaryDirectory();
-      final File file = File('${dir.path}/${PdfService.fileName(_payment!)}');
+      final File file = File('${dir.path}/$name');
       await file.writeAsBytes(bytes, flush: true);
       await SharePlus.instance.share(
         ShareParams(

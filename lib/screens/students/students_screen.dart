@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -11,6 +12,7 @@ import '../../providers/classes_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/students_provider.dart';
 import '../../services/csv_service.dart';
+import '../../utils/file_export.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/filter_dropdown.dart';
@@ -146,7 +148,19 @@ class _StudentsScreenState extends State<StudentsScreen> {
 
   Future<void> _exportCsv() async {
     try {
-      final String path = await context.read<StudentsProvider>().exportToCsv();
+      final StudentsProvider provider = context.read<StudentsProvider>();
+      if (kIsWeb) {
+        final bytes = await provider.exportCsvBytes();
+        await shareOrDownloadBytes(
+          bytes: bytes,
+          fileName: 'kas_siswa_export.csv',
+          mimeType: 'text/csv',
+          text: 'Data Siswa Kas Bintang Nusantara',
+        );
+        return;
+      }
+
+      final String path = await provider.exportToCsv();
       await SharePlus.instance.share(
         ShareParams(
           files: <XFile>[XFile(path)],

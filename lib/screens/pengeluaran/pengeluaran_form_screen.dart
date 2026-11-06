@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_error.dart';
@@ -14,6 +10,8 @@ import '../../models/expense_category_model.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../utils/formatters.dart';
+import '../../utils/local_image_storage.dart';
+import '../../utils/stored_image.dart';
 import '../../widgets/app_card.dart';
 
 /// Form pencatatan pengeluaran kas baru (opsional foto nota).
@@ -33,7 +31,7 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
 
   int? _categoryId;
   DateTime _expenseDate = DateTime.now();
-  File? _photo;
+  String? _photoPath;
   bool _isSaving = false;
 
   @override
@@ -56,8 +54,9 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
     }
   }
 
-  /// Ambil foto nota dari galeri lalu salin ke folder dokumen aplikasi
-  /// agar tersimpan permanen (temp ImagePicker bisa dibersihkan sistem).
+  /// Ambil foto nota dari galeri lalu simpan permanen.
+  /// Android: salin ke folder dokumen aplikasi.
+  /// Web: simpan sebagai data URL base64 di database.
   Future<void> _pickPhoto() async {
     XFile? picked;
     try {
@@ -73,16 +72,13 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
     if (picked == null || !mounted) return;
 
     try {
-      final Directory supportDir = await getApplicationDocumentsDirectory();
-      final Directory notaDir = Directory(p.join(supportDir.path, 'nota'));
-      if (!await notaDir.exists()) {
-        await notaDir.create(recursive: true);
-      }
-      final String fileName =
-          'nota_${DateTime.now().millisecondsSinceEpoch}${p.extension(picked.path)}';
-      final File saved = await File(picked.path).copy(p.join(notaDir.path, fileName));
+      final String stored = await persistPickedImage(
+        picked,
+        folder: 'nota',
+        prefix: 'nota',
+      );
       if (mounted) {
-        setState(() => _photo = saved);
+        setState(() => _photoPath = stored);
       }
     } catch (e) {
       if (mounted) {
@@ -111,7 +107,7 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
         receiptNote: _keteranganController.text.trim().isEmpty
             ? null
             : _keteranganController.text.trim(),
-        photoPath: _photo?.path,
+        photoPath: _photoPath,
         userId: userId,
       );
       if (mounted) {
@@ -269,13 +265,13 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
                       style: AppText.caption,
                     ),
                     const SizedBox(height: 12),
-                    if (_photo != null)
+                    if (_photoPath != null)
                       Stack(
                         children: <Widget>[
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _photo!,
+                            child: StoredImage(
+                              path: _photoPath,
                               height: 160,
                               width: double.infinity,
                               fit: BoxFit.cover,
@@ -289,7 +285,7 @@ class _PengeluaranFormScreenState extends State<PengeluaranFormScreen> {
                               borderRadius: BorderRadius.circular(20),
                               child: IconButton(
                                 onPressed: () =>
-                                    setState(() => _photo = null),
+                                    setState(() => _photoPath = null),
                                 icon: const Icon(
                                   Icons.close_rounded,
                                   color: Colors.white,

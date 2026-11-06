@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +7,7 @@ import '../../providers/session_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../repositories/pengeluaran_repo.dart';
 import '../../utils/formatters.dart';
+import '../../utils/stored_image.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/status_badge.dart';
 import '../payments/bukti_pembayaran_screen.dart';
@@ -354,25 +353,24 @@ class _PhotoNota extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final File? file = File(path).existsSync() ? File(path) : null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: AppCard(
         padding: EdgeInsets.zero,
-        child: file == null
-            ? const SizedBox(
-                height: 140,
-                child: Center(
-                  child: Text('File foto nota tidak ditemukan.',
-                      style: AppText.caption),
-                ),
-              )
-            : Image.file(
-                file,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
+        child: StoredImage(
+          path: path,
+          height: 200,
+          width: double.infinity,
+          fallback: const SizedBox(
+            height: 140,
+            child: Center(
+              child: Text(
+                'File foto nota tidak ditemukan.',
+                style: AppText.caption,
               ),
+            ),
+          ),
+        ),
       ),
     );
   }

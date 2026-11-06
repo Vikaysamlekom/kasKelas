@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import '../../core/app_error.dart';
 import '../../core/constants.dart';
 import '../../providers/session_provider.dart';
 import '../../services/backup_service.dart';
+import '../../utils/file_export.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
@@ -30,6 +32,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   bool _autoEnabled = false;
   AutoBackupFrequency _freq = AutoBackupFrequency.mati;
   String _lastBackup = '-';
+  String? _autoBackupError;
 
   @override
   void initState() {
@@ -39,6 +42,31 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
+    if (kIsWeb) {
+      try {
+        final List<BackupFile> files = await _service.listWebAutoBackups();
+        final bool enabled = await _service.isAutoBackupEnabled();
+        final AutoBackupFrequency freq = await _service.autoBackupFrequency();
+        final String last = await _service.lastBackupLabel();
+        final String? error = await _service.lastAutoBackupError();
+        if (!mounted) return;
+        setState(() {
+          _files = files;
+          _autoEnabled = enabled;
+          _freq = freq;
+          _lastBackup = last;
+          _autoBackupError = error;
+          _loading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _autoBackupError = pesanErrorUmum(e, 'Memuat backup browser');
+          _loading = false;
+        });
+      }
+      return;
+    }
     final List<BackupFile> files = await _service.listBackupsSafe();
     final bool enabled = await _service.isAutoBackupEnabled();
     final AutoBackupFrequency freq = await _service.autoBackupFrequency();
@@ -49,6 +77,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       _autoEnabled = enabled;
       _freq = freq;
       _lastBackup = last;
+      _autoBackupError = null;
       _loading = false;
     });
   }
@@ -60,6 +89,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Future<void> _backupNow() async {
     setState(() => _busy = true);
     try {
+      if (kIsWeb) {
+        final Uint8List bytes = await _service.createWebBackup();
+        final String name = BackupService.webFileNameFor(DateTime.now());
+        await shareOrDownloadBytes(
+          bytes: bytes,
+          fileName: name,
+          mimeType: 'application/json',
+          text: 'Backup ${AppConstants.appName}',
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Backup siap diunduh: $name'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        await _load();
+        return;
+      }
+
       final String path = await _service.backupNow();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,11 +129,26 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _shareBackup(BackupFile f) async {
+    if (kIsWeb) {
+      try {
+        await shareOrDownloadBytes(
+          bytes: await _service.webAutoBackupBytes(f.path),
+          fileName: f.name,
+          mimeType: 'application/json',
+          text: 'Backup ${AppConstants.appName}',
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(pesanErrorUmum(e, 'Mengunduh backup'))),
+          );
+        }
+      }
+      return;
+    }
+
     await SharePlus.instance.share(
-      ShareParams(
-        files: <XFile>[XFile(f.path)],
-        downloadFallbackEnabled: true,
-      ),
+      ShareParams(files: <XFile>[XFile(f.path)], downloadFallbackEnabled: true),
     );
   }
 
@@ -93,6 +157,40 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   // ------------------------------------------------------------------
 
   Future<void> _pickAndRestore() async {
+    if (kIsWeb) {
+      final PlatformFile? picked = await FilePicker.pickFile(
+        dialogTitle: 'Pilih file backup (.json)',
+        type: FileType.custom,
+        allowedExtensions: <String>['json'],
+      );
+      if (picked == null) return;
+
+      try {
+        final Uint8List bytes = await picked.readAsBytes();
+        if (bytes.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('File backup kosong atau tidak bisa dibaca.'),
+              ),
+            );
+          }
+          return;
+        }
+        await _confirmRestoreAction(
+          picked.name,
+          () => _service.restoreWebBackup(bytes),
+          web: true,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(pesanErrorUmum(e, 'Membaca file backup'))),
+        );
+      }
+      return;
+    }
+
     final PlatformFile? picked = await FilePicker.pickFile(
       dialogTitle: 'Pilih file backup (.db)',
       type: FileType.custom,
@@ -100,27 +198,50 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     );
     if (picked == null) return;
     final String? path = picked.path;
-    if (path == null) return;
+    if (path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File backup tidak bisa dibaca di perangkat ini.'),
+          ),
+        );
+      }
+      return;
+    }
     await _confirmRestore(p.basename(path), path);
   }
 
-  Future<void> _confirmRestore(String label, String path) async {
+  Future<void> _confirmRestore(String label, String path) {
+    return _confirmRestoreAction(label, () => _service.restore(path));
+  }
+
+  Future<void> _confirmRestoreAction(
+    String label,
+    Future<void> Function() restore, {
+    bool web = false,
+  }) async {
     final bool ok = await showConfirmDialog(
       context,
       title: 'Restore Database',
-      message: 'Restore akan MENGGANTI seluruh data saat ini dengan isi '
-          'backup "$label".\n\n'
-          'Data yang ada sekarang dan tidak ada di dalam backup akan HILANG '
-          'permanen.\n\n'
-          'Sebelum restore, salinan data saat ini akan dicadangkan otomatis. '
-          'Anda akan logout setelah restore selesai. Lanjutkan?',
+      message: web
+          ? 'Restore akan MENGGANTI seluruh data web saat ini dengan isi '
+                'file "$label".\n\n'
+                'Pastikan file JSON ini berasal dari aplikasi Kas Bintang '
+                'Nusantara dan sudah Anda simpan di tempat aman.\n\n'
+                'Anda akan logout setelah restore selesai. Lanjutkan?'
+          : 'Restore akan MENGGANTI seluruh data saat ini dengan isi '
+                'backup "$label".\n\n'
+                'Data yang ada sekarang dan tidak ada di dalam backup akan HILANG '
+                'permanen.\n\n'
+                'Sebelum restore, salinan data saat ini akan dicadangkan otomatis. '
+                'Anda akan logout setelah restore selesai. Lanjutkan?',
       confirmLabel: 'Ya, Restore',
     );
     if (!ok || !mounted) return;
 
     setState(() => _busy = true);
     try {
-      await _service.restore(path);
+      await restore();
       if (!mounted) return;
       await context.read<SessionProvider>().logout();
       if (!mounted) return;
@@ -144,13 +265,24 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   Future<void> _deleteBackup(BackupFile f) async {
     final bool ok = await showConfirmDialog(
       context,
-      title: 'Hapus File Backup',
-      message: 'Hapus "${f.name}"? File ini tidak akan bisa dipulihkan.',
+      title: kIsWeb ? 'Hapus Snapshot Backup' : 'Hapus File Backup',
+      message: 'Hapus "${f.name}"? Backup ini tidak akan bisa dipulihkan.',
       confirmLabel: 'Hapus',
     );
     if (!ok || !mounted) return;
-    await _service.deleteBackup(f.path);
-    await _load();
+    try {
+      if (kIsWeb) {
+        await _service.deleteWebAutoBackup(f.path);
+      } else {
+        await _service.deleteBackup(f.path);
+      }
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(pesanErrorUmum(e, 'Menghapus backup'))),
+      );
+    }
   }
 
   // ------------------------------------------------------------------
@@ -164,6 +296,9 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         enabled: true,
         frequency: AutoBackupFrequency.harian,
       );
+    }
+    if (kIsWeb && value) {
+      await _service.runScheduledBackupIfDue();
     }
     await _load();
   }
@@ -189,23 +324,31 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 _cardAksi(),
                 const SizedBox(height: 12),
                 _cardOtomatis(),
+                if (kIsWeb) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _cardInfoWeb(),
+                ],
                 const SizedBox(height: 12),
-                Text(
-                  'Daftar File Backup',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                if (_files.isEmpty)
-                  const EmptyState(
-                    icon: Icons.save_alt_rounded,
-                    title: 'Belum ada backup',
-                    message: 'Buat backup pertama Anda dengan tombol "Backup '
-                        'Sekarang" di atas.',
-                  )
-                else
-                  for (final BackupFile f in _files) _tileFile(f),
+                if (kIsWeb || _files.isNotEmpty) ...<Widget>[
+                  Text(
+                    kIsWeb
+                        ? 'Snapshot Otomatis di Browser'
+                        : 'Daftar File Backup',
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_files.isEmpty)
+                    const EmptyState(
+                      icon: Icons.save_alt_rounded,
+                      title: 'Belum ada snapshot otomatis',
+                      message:
+                          'Aktifkan Backup Otomatis untuk menyimpan '
+                          'snapshot di browser ini.',
+                    )
+                  else
+                    for (final BackupFile f in _files) _tileFile(f),
+                ],
               ],
             ),
     );
@@ -226,32 +369,47 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
           children: <Widget>[
             Row(
               children: <Widget>[
-                const Icon(Icons.backup_rounded, color: AppColors.navy),
+                Icon(
+                  kIsWeb ? Icons.cloud_download_rounded : Icons.backup_rounded,
+                  color: AppColors.navy,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'Backup Database',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  kIsWeb ? 'Backup Data (Web)' : 'Backup Database',
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Backup terakhir: $_lastBackup',
+              '${kIsWeb ? 'Backup otomatis terakhir' : 'Backup terakhir'}: '
+              '$_lastBackup',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            if (kIsWeb) ...<Widget>[
+              const SizedBox(height: 6),
+              Text(
+                'Backup manual diunduh sebagai JSON. Simpan file tersebut '
+                'di luar browser untuk cadangan tambahan.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: _busy ? null : _backupNow,
-              icon: const Icon(Icons.save_alt_rounded),
-              label: const Text('Backup Sekarang'),
+              icon: Icon(
+                kIsWeb ? Icons.download_rounded : Icons.save_alt_rounded,
+              ),
+              label: Text(kIsWeb ? 'Unduh Backup (JSON)' : 'Backup Sekarang'),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: _busy ? null : _pickAndRestore,
               icon: const Icon(Icons.restore_rounded),
-              label: const Text('Restore dari File...'),
+              label: Text(
+                kIsWeb ? 'Restore dari File JSON...' : 'Restore dari File...',
+              ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.orange,
                 side: const BorderSide(color: AppColors.orange),
@@ -260,6 +418,55 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             if (_busy) ...<Widget>[
               const SizedBox(height: 12),
               const LinearProgressIndicator(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cardInfoWeb() {
+    return Card(
+      elevation: 0,
+      color: AppColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.divider),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Icon(Icons.info_outline_rounded, color: AppColors.teal),
+                const SizedBox(width: 8),
+                Text(
+                  'Backup di Web',
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Data aplikasi web tersimpan di penyimpanan browser (IndexedDB). '
+              'Backup otomatis menyimpan hingga '
+              '${BackupService.webAutoBackupRetention} snapshot di browser ini '
+              'sesuai frekuensi yang dipilih. Snapshot dapat dipulihkan atau '
+              'diunduh dari daftar di bawah. Unduhan otomatis ke folder '
+              'perangkat tidak diizinkan browser; gunakan Backup Data (Web) '
+              'untuk mengunduh salinan JSON secara manual.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (_autoBackupError != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                'Backup otomatis terakhir gagal: $_autoBackupError',
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: AppColors.danger),
+              ),
             ],
           ],
         ),
@@ -281,8 +488,15 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
             value: _autoEnabled,
             onChanged: _busy ? null : _toggleAuto,
             title: const Text('Backup Otomatis'),
-            subtitle: const Text('Backup dijalankan saat aplikasi dibuka'),
-            secondary: const Icon(Icons.schedule_rounded, color: AppColors.teal),
+            subtitle: Text(
+              kIsWeb
+                  ? 'Snapshot disimpan di browser saat aplikasi dibuka'
+                  : 'Backup dijalankan saat aplikasi dibuka',
+            ),
+            secondary: const Icon(
+              Icons.schedule_rounded,
+              color: AppColors.teal,
+            ),
           ),
           if (_autoEnabled)
             Padding(
@@ -339,7 +553,15 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (String v) {
             if (v == 'restore') {
-              _confirmRestore(f.name, f.path);
+              if (kIsWeb) {
+                _confirmRestoreAction(
+                  f.name,
+                  () => _service.restoreWebAutoBackup(f.path),
+                  web: true,
+                );
+              } else {
+                _confirmRestore(f.name, f.path);
+              }
             } else if (v == 'share') {
               _shareBackup(f);
             } else if (v == 'hapus') {
@@ -353,9 +575,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 children: <Widget>[
                   Icon(Icons.restore_rounded),
                   SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Restore'),
-                  ),
+                  Expanded(child: Text('Restore')),
                 ],
               ),
             ),
@@ -365,9 +585,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 children: <Widget>[
                   Icon(Icons.share_rounded),
                   SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Bagikan / Simpan'),
-                  ),
+                  Expanded(child: Text('Bagikan / Simpan')),
                 ],
               ),
             ),

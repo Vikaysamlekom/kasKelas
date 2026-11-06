@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 
 import '../database/db_helper.dart';
@@ -226,12 +229,20 @@ class StudentsProvider extends ChangeNotifier {
   Future<StudentModel?> studentById(int id) =>
       studentRepository.getById(id);
 
-  /// Export CSV → path file sementara yang sudah ditulis.
+  /// Export CSV → path file sementara yang sudah ditulis (Android).
   /// Mengambil seluruh data yang cocok filter (bukan hanya halaman yang
   /// sudah dimuat di layar).
   Future<String> exportToCsv() async {
     final List<StudentModel> all = await studentRepository.list(_filter);
     return CsvStudentService.writeExportFile(all);
+  }
+
+  /// Export CSV → byte siap unduh (web). Tidak memakai filesystem.
+  Future<Uint8List> exportCsvBytes() async {
+    final List<StudentModel> all = await studentRepository.list(_filter);
+    return Uint8List.fromList(
+      utf8.encode(CsvStudentService.exportCsv(all)),
+    );
   }
 
   StudentModel _toModel(Map<String, Object?> data, {int? id}) {
